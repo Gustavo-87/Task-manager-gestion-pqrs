@@ -60,15 +60,15 @@ Levantar los contenedores:
 
 ```bash
 ./vendor/bin/sail up -d
-
-Ejecutar migraciones y seeders:
+```
+## Ejecutar migraciones y seeders:
 
 ./vendor/bin/sail php artisan migrate:fresh --seed
 
-Abrir en el navegador:
+Abrir en el navegador: http://localhost:8085/pqrs
 
-http://localhost:8085/pqrs
-Funcionalidades implementadas
+## Funcionalidades implementadas
+
 Listado de PQRs
 Creación de PQRs
 Edición de PQRs
