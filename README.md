@@ -69,11 +69,11 @@ Abrir en el navegador: http://localhost:8085/pqrs
 
 ## Funcionalidades implementadas
 
-Listado de PQRs
-Creación de PQRs
-Edición de PQRs
-Eliminación de PQRs
-Búsqueda por asunto
-Filtro por estado
-Relación entre PQR y TipoPqr
-Relación entre PQR y User
+- Listado de PQRs
+- Creación de PQRs
+- Edición de PQRs
+- Eliminación de PQRs
+- Búsqueda por asunto
+- Filtro por estado
+- Relación entre PQR y TipoPqr
+- Relación entre PQR y User
