@@ -77,3 +77,8 @@ Abrir en el navegador: http://localhost:8085/pqrs
 - Filtro por estado
 - Relación entre PQR y TipoPqr
 - Relación entre PQR y User
+
+## Evidencia de funcionamiento
+
+![Listado de PQRs](docs/evidencias/listado_pqrs.png)
+
