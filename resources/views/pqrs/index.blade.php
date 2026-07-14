@@ -31,10 +31,23 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($pqrs as $pqr)
+                                @php
+                                    $estado = match ($pqr->estado) {
+                                        'radicada' => ['label' => 'Radicada', 'class' => 'bg-green-100 text-green-800 ring-green-600/20'],
+                                        'en_revision' => ['label' => 'En revisión', 'class' => 'bg-yellow-100 text-yellow-800 ring-yellow-600/20'],
+                                        'respondida' => ['label' => 'Respondida', 'class' => 'bg-orange-100 text-orange-800 ring-orange-600/20'],
+                                        'cerrada' => ['label' => 'Cerrada', 'class' => 'bg-blue-100 text-blue-800 ring-blue-600/20'],
+                                        default => ['label' => ucfirst(str_replace('_', ' ', $pqr->estado)), 'class' => 'bg-gray-100 text-gray-800 ring-gray-600/20'],
+                                    };
+                                @endphp
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-gray-900">{{ $pqr->asunto }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $pqr->tipoPqr?->nombre ?? 'Sin tipo' }}</td>
-                                    <td class="px-4 py-3"><span class="rounded-full bg-indigo-50 px-2 py-1 text-xs text-indigo-700">{{ str_replace('_', ' ', $pqr->estado) }}</span></td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $estado['class'] }}">
+                                            {{ $estado['label'] }}
+                                        </span>
+                                    </td>
                                     <td class="px-4 py-3 text-gray-600">{{ $pqr->fecha_radicacion }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $pqr->user?->name ?? 'Sin usuario' }}</td>
                                     <td class="px-4 py-3">
