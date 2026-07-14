@@ -33,9 +33,22 @@ class PqrController extends Controller
             $query->where('estado', $request->estado);
         }
 
-        $pqrs = $query->orderBy('created_at', 'desc')->get();
+        $summaryQuery = Pqr::query();
+        if ($request->user()->rol !== 'admin') {
+            $summaryQuery->where('user_id', $request->user()->id);
+        }
 
-        return view('pqrs.index', compact('pqrs'));
+        $stats = (clone $summaryQuery)
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN estado = 'radicada' THEN 1 ELSE 0 END) as radicadas")
+            ->selectRaw("SUM(CASE WHEN estado = 'en_revision' THEN 1 ELSE 0 END) as en_revision")
+            ->selectRaw("SUM(CASE WHEN estado = 'respondida' THEN 1 ELSE 0 END) as respondidas")
+            ->selectRaw("SUM(CASE WHEN estado = 'cerrada' THEN 1 ELSE 0 END) as cerradas")
+            ->first();
+
+        $pqrs = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+
+        return view('pqrs.index', compact('pqrs', 'stats'));
     }
 
     public function create()

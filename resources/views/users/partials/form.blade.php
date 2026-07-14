@@ -1,47 +1,23 @@
-<div class="space-y-6">
-    <div>
-        <x-input-label for="name" value="Nombre" />
-        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user?->name)" required autofocus />
-        <x-input-error :messages="$errors->get('name')" class="mt-2" />
-    </div>
+@if ($errors->any())<div class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><p class="font-semibold">No fue posible guardar el usuario.</p><p class="mt-1">Revisa los campos señalados.</p></div>@endif
 
-    <div>
-        <x-input-label for="email" value="Correo electrónico" />
-        <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user?->email)" required />
-        <x-input-error :messages="$errors->get('email')" class="mt-2" />
-    </div>
+<div class="grid gap-6 lg:grid-cols-3">
+    <section class="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-2">
+        <div class="border-b border-slate-100 pb-4"><h2 class="text-lg font-semibold text-slate-900">Información de la cuenta</h2><p class="mt-1 text-sm text-slate-500">Datos personales y nivel de acceso al sistema.</p></div>
+        <div><label for="name" class="block text-sm font-semibold text-slate-700">Nombre completo <span class="text-rose-500">*</span></label><input id="name" name="name" type="text" value="{{ old('name', $user?->name) }}" required autofocus placeholder="Nombre y apellido" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
+        <div><label for="email" class="block text-sm font-semibold text-slate-700">Correo electrónico <span class="text-rose-500">*</span></label><input id="email" name="email" type="email" value="{{ old('email', $user?->email) }}" required placeholder="usuario@correo.com" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"><p class="mt-1 text-xs text-slate-500">Se utilizará para iniciar sesión y recibir notificaciones.</p><x-input-error :messages="$errors->get('email')" class="mt-2" /></div>
+        <div><label for="rol" class="block text-sm font-semibold text-slate-700">Rol <span class="text-rose-500">*</span></label><select id="rol" name="rol" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"><option value="residente" @selected(old('rol', $user?->rol ?? 'residente') === 'residente')>Residente</option><option value="admin" @selected(old('rol', $user?->rol) === 'admin')>Administrador</option></select><p class="mt-1 text-xs text-slate-500">El administrador tiene control total; el residente gestiona únicamente sus PQR.</p><x-input-error :messages="$errors->get('rol')" class="mt-2" /></div>
+    </section>
 
-    <div>
-        <x-input-label for="rol" value="Rol" />
-        <select id="rol" name="rol" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-            <option value="residente" @selected(old('rol', $user?->rol ?? 'residente') === 'residente')>Residente</option>
-            <option value="admin" @selected(old('rol', $user?->rol) === 'admin')>Administrador</option>
-        </select>
-        <x-input-error :messages="$errors->get('rol')" class="mt-2" />
-    </div>
+    <aside class="space-y-5">
+        @if ($user)
+            <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><h2 class="font-semibold text-slate-900">Estado de la cuenta</h2><input type="hidden" name="activo" value="0"><label class="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50"><input type="checkbox" name="activo" value="1" @checked(old('activo', $user->activo)) class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"><span><span class="block text-sm font-semibold text-slate-700">Cuenta activa</span><span class="mt-1 block text-xs text-slate-500">Permite que el usuario ingrese al sistema.</span></span></label><x-input-error :messages="$errors->get('activo')" class="mt-2" /></section>
+        @endif
 
-    @if ($user)
-        <label class="flex items-center gap-3">
-            <input type="hidden" name="activo" value="0">
-            <input type="checkbox" name="activo" value="1" @checked(old('activo', $user->activo)) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-            <span class="text-sm text-gray-700">Cuenta activa</span>
-        </label>
-        <x-input-error :messages="$errors->get('activo')" class="mt-2" />
-    @endif
-
-    <div>
-        <x-input-label for="password" :value="$user ? 'Nueva contraseña (opcional)' : 'Contraseña'" />
-        <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" :required="! $user" autocomplete="new-password" />
-        <x-input-error :messages="$errors->get('password')" class="mt-2" />
-    </div>
-
-    <div>
-        <x-input-label for="password_confirmation" value="Confirmar contraseña" />
-        <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" :required="! $user" autocomplete="new-password" />
-    </div>
-
-    <div class="flex items-center gap-4">
-        <x-primary-button>{{ $user ? 'Guardar cambios' : 'Crear usuario' }}</x-primary-button>
-        <a href="{{ route('users.index') }}" class="text-sm font-medium text-gray-600 hover:text-gray-900">Cancelar</a>
-    </div>
+        <section class="rounded-xl border {{ $user ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white' }} p-5 shadow-sm"><h2 class="font-semibold {{ $user ? 'text-amber-900' : 'text-slate-900' }}">{{ $user ? 'Restablecer contraseña' : 'Contraseña inicial' }}</h2><p class="mt-1 text-xs {{ $user ? 'text-amber-700' : 'text-slate-500' }}">{{ $user ? 'Déjala vacía para conservar la contraseña actual.' : 'Debe tener al menos 8 caracteres.' }}</p>
+            <div class="mt-4"><label for="password" class="block text-sm font-medium text-slate-700">{{ $user ? 'Nueva contraseña' : 'Contraseña' }}</label><input id="password" name="password" type="password" @required(! $user) autocomplete="new-password" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"><x-input-error :messages="$errors->get('password')" class="mt-2" /></div>
+            <div class="mt-4"><label for="password_confirmation" class="block text-sm font-medium text-slate-700">Confirmar contraseña</label><input id="password_confirmation" name="password_confirmation" type="password" @required(! $user) autocomplete="new-password" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></div>
+        </section>
+    </aside>
 </div>
+
+<div class="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end"><a href="{{ route('users.index') }}" class="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</a><button class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">{{ $user ? 'Guardar cambios' : 'Crear usuario' }}</button></div>

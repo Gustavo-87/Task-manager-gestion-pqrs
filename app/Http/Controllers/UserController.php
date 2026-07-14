@@ -13,17 +13,25 @@ class UserController extends Controller
 {
     public function index(Request $request): View
     {
+        $stats = User::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN rol = 'admin' THEN 1 ELSE 0 END) as admins")
+            ->selectRaw("SUM(CASE WHEN rol = 'residente' THEN 1 ELSE 0 END) as residentes")
+            ->selectRaw("SUM(CASE WHEN activo = 0 THEN 1 ELSE 0 END) as inactivos")
+            ->first();
+
         $users = User::query()
             ->when($request->filled('buscar'), function ($query) use ($request) {
                 $term = '%'.$request->string('buscar')->trim().'%';
                 $query->where(fn ($query) => $query->where('name', 'like', $term)->orWhere('email', 'like', $term));
             })
             ->when($request->filled('rol'), fn ($query) => $query->where('rol', $request->string('rol')))
+            ->when($request->filled('estado'), fn ($query) => $query->where('activo', $request->string('estado') === 'activo'))
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        return view('users.index', compact('users'));
+        return view('users.index', compact('users', 'stats'));
     }
 
     public function create(): View

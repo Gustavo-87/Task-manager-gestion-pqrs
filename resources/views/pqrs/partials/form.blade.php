@@ -1,57 +1,81 @@
 @php($editing = $editing ?? false)
 
-<div>
-    <x-input-label for="asunto" value="Asunto" />
-    <x-text-input id="asunto" name="asunto" class="mt-1 block w-full" :value="old('asunto', $pqr->asunto ?? '')" required autofocus />
-    <x-input-error :messages="$errors->get('asunto')" class="mt-2" />
-</div>
+@if ($errors->any())
+    <div class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        <p class="font-semibold">Revisa la información ingresada.</p>
+        <p class="mt-1">Hay campos pendientes o con datos incorrectos.</p>
+    </div>
+@endif
 
-<div>
-    <x-input-label for="descripcion" value="Descripción" />
-    <textarea id="descripcion" name="descripcion" rows="5" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('descripcion', $pqr->descripcion ?? '') }}</textarea>
-    <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
-</div>
-
-<div class="grid gap-5 sm:grid-cols-2" x-data="{
+<div class="grid gap-6 lg:grid-cols-3" x-data="{
     radicacion: @js(old('fecha_radicacion', isset($pqr) ? $pqr->fecha_radicacion->toDateString() : now()->toDateString())),
+    estado: @js(old('estado', $pqr->estado ?? 'radicada')),
     get limite() {
         if (!this.radicacion) return '';
         const fecha = new Date(this.radicacion + 'T00:00:00');
         fecha.setDate(fecha.getDate() + 15);
         return fecha.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    },
+    estadoClase() {
+        return { radicada: 'bg-green-100 text-green-800', en_revision: 'bg-yellow-100 text-yellow-800', respondida: 'bg-orange-100 text-orange-800', cerrada: 'bg-blue-100 text-blue-800' }[this.estado] || 'bg-slate-100 text-slate-700';
     }
 }">
-    <div>
-        <x-input-label for="tipo_pqr_id" value="Categoría" />
-        <select id="tipo_pqr_id" name="tipo_pqr_id" required class="mt-1 block w-full rounded-md border-gray-300">
-            <option value="">Seleccione una categoría...</option>
-            @foreach ($tipos as $tipo)
-                <option value="{{ $tipo->id }}" @selected(old('tipo_pqr_id', $pqr->tipo_pqr_id ?? '') == $tipo->id)>{{ $tipo->nombre }}</option>
-            @endforeach
-        </select>
-        <x-input-error :messages="$errors->get('tipo_pqr_id')" class="mt-2" />
-    </div>
+    <section class="space-y-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-2">
+        <div class="border-b border-slate-100 pb-4"><h2 class="text-lg font-semibold text-slate-900">Información de la solicitud</h2><p class="mt-1 text-sm text-slate-500">Describe claramente la situación para facilitar su gestión.</p></div>
 
-    @if ($editing && auth()->user()->rol === 'admin')
         <div>
-            <x-input-label for="estado" value="Estado" />
-            <select id="estado" name="estado" required class="mt-1 block w-full rounded-md border-gray-300">
-                @foreach (['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada'] as $value => $label)
-                    <option value="{{ $value }}" @selected(old('estado', $pqr->estado) === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
+            <label for="asunto" class="block text-sm font-semibold text-slate-700">Asunto <span class="text-rose-500">*</span></label>
+            <input id="asunto" name="asunto" value="{{ old('asunto', $pqr->asunto ?? '') }}" required autofocus maxlength="150" placeholder="Ejemplo: Falla en la iluminación del parqueadero" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            <div class="mt-1 flex justify-between gap-3"><p class="text-xs text-slate-500">Resume el motivo principal de la solicitud.</p><p class="text-xs text-slate-400">Máximo 150 caracteres</p></div>
+            <x-input-error :messages="$errors->get('asunto')" class="mt-2" />
         </div>
-    @endif
 
-    <div>
-        <x-input-label for="fecha_radicacion" value="Fecha de radicación" />
-        <x-text-input id="fecha_radicacion" type="date" name="fecha_radicacion" class="mt-1 block w-full" x-model="radicacion" :value="old('fecha_radicacion', $pqr->fecha_radicacion ?? now()->toDateString())" required />
-        <x-input-error :messages="$errors->get('fecha_radicacion')" class="mt-2" />
-    </div>
+        <div>
+            <label for="descripcion" class="block text-sm font-semibold text-slate-700">Descripción <span class="text-rose-500">*</span></label>
+            <textarea id="descripcion" name="descripcion" rows="7" required placeholder="Explica detalladamente lo ocurrido, dónde sucedió y cualquier información relevante..." class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('descripcion', $pqr->descripcion ?? '') }}</textarea>
+            <p class="mt-1 text-xs text-slate-500">Incluye la información necesaria para comprender y atender la solicitud.</p>
+            <x-input-error :messages="$errors->get('descripcion')" class="mt-2" />
+        </div>
 
-    <div>
-        <x-input-label for="fecha_limite_respuesta" value="Fecha límite de respuesta" />
-        <div id="fecha_limite_respuesta" class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700" x-text="limite"></div>
-        <p class="mt-1 text-xs text-gray-500">Se calcula automáticamente: 15 días calendario después de la radicación.</p>
-    </div>
+        <div>
+            <label for="tipo_pqr_id" class="block text-sm font-semibold text-slate-700">Categoría <span class="text-rose-500">*</span></label>
+            <select id="tipo_pqr_id" name="tipo_pqr_id" required class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="">Seleccione una categoría...</option>
+                @foreach ($tipos as $tipo)<option value="{{ $tipo->id }}" @selected(old('tipo_pqr_id', $pqr->tipo_pqr_id ?? '') == $tipo->id)>{{ $tipo->nombre }}</option>@endforeach
+            </select>
+            <x-input-error :messages="$errors->get('tipo_pqr_id')" class="mt-2" />
+        </div>
+    </section>
+
+    <aside class="space-y-5">
+        @if ($editing && auth()->user()->rol === 'admin')
+            <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between gap-3"><h2 class="font-semibold text-slate-900">Estado</h2><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoClase()" x-text="{radicada:'Radicada',en_revision:'En revisión',respondida:'Respondida',cerrada:'Cerrada'}[estado]"></span></div>
+                <select id="estado" name="estado" required x-model="estado" class="mt-4 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    @foreach (['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada'] as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
+                </select>
+                <p class="mt-2 text-xs text-slate-500">El residente recibirá un correo cuando cambies el estado.</p>
+                <x-input-error :messages="$errors->get('estado')" class="mt-2" />
+            </section>
+        @endif
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 class="font-semibold text-slate-900">Fechas de atención</h2>
+            <div class="mt-4">
+                <label for="fecha_radicacion" class="block text-sm font-medium text-slate-700">Fecha de radicación</label>
+                <input id="fecha_radicacion" type="date" name="fecha_radicacion" x-model="radicacion" required class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <x-input-error :messages="$errors->get('fecha_radicacion')" class="mt-2" />
+            </div>
+            <div class="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Fecha límite de respuesta</p>
+                <p class="mt-1 text-lg font-bold text-indigo-900" x-text="limite"></p>
+                <p class="mt-1 text-xs text-indigo-700">Se calcula automáticamente a 15 días calendario.</p>
+            </div>
+        </section>
+
+        <section class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+            <p class="font-semibold">Información importante</p>
+            <p class="mt-1 text-xs leading-5">Los campos marcados con * son obligatorios. Podrás consultar el avance desde el módulo de PQR.</p>
+        </section>
+    </aside>
 </div>

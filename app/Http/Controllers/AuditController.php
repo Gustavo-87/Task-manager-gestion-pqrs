@@ -11,6 +11,13 @@ class AuditController extends Controller
 {
     public function index(Request $request): View
     {
+        $stats = [
+            'total' => Audit::count(),
+            'today' => Audit::whereDate('created_at', today())->count(),
+            'users' => Audit::whereNotNull('user_id')->distinct()->count('user_id'),
+            'pqrs' => Audit::where('module', 'PQR')->whereNotNull('auditable_id')->distinct()->count('auditable_id'),
+        ];
+
         $audits = Audit::with('user')
             ->when($request->filled('buscar'), fn ($query) => $query->where('description', 'like', '%'.$request->string('buscar')->trim().'%'))
             ->when($request->filled('user_id'), fn ($query) => $query->where('user_id', $request->integer('user_id')))
@@ -27,6 +34,7 @@ class AuditController extends Controller
             'users' => User::orderBy('name')->get(['id', 'name']),
             'modules' => Audit::query()->distinct()->orderBy('module')->pluck('module'),
             'actions' => Audit::query()->distinct()->orderBy('action')->pluck('action'),
+            'stats' => $stats,
         ]);
     }
 
