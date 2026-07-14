@@ -41,4 +41,21 @@ class AuditLogger
 
         return collect($values)->except(self::SENSITIVE)->all();
     }
+
+    public static function logSystem(
+        string $module,
+        string $action,
+        string $description,
+        ?Model $auditable = null,
+        ?array $newValues = null,
+    ): Audit {
+        return Audit::create([
+            'module' => $module,
+            'action' => $action,
+            'auditable_type' => $auditable?->getMorphClass(),
+            'auditable_id' => $auditable?->getKey(),
+            'description' => $description,
+            'new_values' => self::sanitize($newValues),
+        ]);
+    }
 }

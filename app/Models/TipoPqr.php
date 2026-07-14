@@ -9,7 +9,14 @@ class TipoPqr extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'descripcion'];
+    protected $fillable = ['nombre', 'descripcion', 'activo'];
+
+    protected $attributes = ['activo' => true];
+
+    protected function casts(): array
+    {
+        return ['activo' => 'boolean'];
+    }
 
     public function pqrs()
     {

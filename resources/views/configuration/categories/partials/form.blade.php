@@ -1,0 +1,6 @@
+<div class="space-y-6">
+    <div><x-input-label for="nombre" value="Nombre" /><x-text-input id="nombre" name="nombre" class="mt-1 block w-full" :value="old('nombre', $category?->nombre)" required autofocus /><x-input-error :messages="$errors->get('nombre')" class="mt-2" /></div>
+    <div><x-input-label for="descripcion" value="Descripción" /><textarea id="descripcion" name="descripcion" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('descripcion', $category?->descripcion) }}</textarea><x-input-error :messages="$errors->get('descripcion')" class="mt-2" /></div>
+    @if ($category)<label class="flex items-center gap-3"><input type="hidden" name="activo" value="0"><input type="checkbox" name="activo" value="1" @checked(old('activo', $category->activo)) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"><span class="text-sm text-gray-700">Categoría activa</span></label>@endif
+    <div class="flex gap-4"><x-primary-button>{{ $category ? 'Guardar cambios' : 'Crear categoría' }}</x-primary-button><a href="{{ route('configuration.index') }}" class="text-sm font-medium text-gray-600 hover:text-gray-900">Cancelar</a></div>
+</div>

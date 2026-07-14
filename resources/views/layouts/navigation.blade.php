@@ -25,6 +25,12 @@
                         <x-nav-link :href="route('audits.index')" :active="request()->routeIs('audits.*')">
                             Auditoría
                         </x-nav-link>
+                        <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
+                            Reportes
+                        </x-nav-link>
+                        <x-nav-link :href="route('configuration.index')" :active="request()->routeIs('configuration.*') || request()->routeIs('categories.*')">
+                            Configuración
+                        </x-nav-link>
                     @endif
                 </div>
             </div>
@@ -90,6 +96,12 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('audits.index')" :active="request()->routeIs('audits.*')">
                     Auditoría
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
+                    Reportes
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('configuration.index')" :active="request()->routeIs('configuration.*') || request()->routeIs('categories.*')">
+                    Configuración
                 </x-responsive-nav-link>
             @endif
         </div>
