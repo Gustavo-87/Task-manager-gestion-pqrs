@@ -41,7 +41,7 @@ return [
         'descripcion' => 'descripción',
         'fecha_radicacion' => 'fecha de radicación',
         'fecha_limite_respuesta' => 'fecha límite de respuesta',
-        'tipo_pqr_id' => 'tipo de PQR',
+        'tipo_pqr_id' => 'categoría',
         'estado' => 'estado',
     ],
 ];

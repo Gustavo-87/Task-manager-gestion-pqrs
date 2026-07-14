@@ -18,6 +18,14 @@
                     <x-nav-link :href="route('pqrs.index')" :active="request()->routeIs('pqrs.*')">
                         {{ __('PQR') }}
                     </x-nav-link>
+                    @if (Auth::user()->rol === 'admin')
+                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
+                            Usuarios
+                        </x-nav-link>
+                        <x-nav-link :href="route('audits.index')" :active="request()->routeIs('audits.*')">
+                            Auditoría
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -76,6 +84,14 @@
             <x-responsive-nav-link :href="route('pqrs.index')" :active="request()->routeIs('pqrs.*')">
                 {{ __('PQR') }}
             </x-responsive-nav-link>
+            @if (Auth::user()->rol === 'admin')
+                <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
+                    Usuarios
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('audits.index')" :active="request()->routeIs('audits.*')">
+                    Auditoría
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

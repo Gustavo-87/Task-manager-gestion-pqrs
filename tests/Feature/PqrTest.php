@@ -30,6 +30,7 @@ class PqrTest extends TestCase
             'asunto' => 'Solicitud de información',
             'user_id' => $user->id,
         ]);
+        $this->assertSame('2026-07-29', Pqr::where('asunto', 'Solicitud de información')->firstOrFail()->fecha_limite_respuesta->toDateString());
     }
 
     public function test_updating_a_pqr_records_its_history(): void

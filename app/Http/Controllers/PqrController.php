@@ -7,6 +7,8 @@ use App\Models\PqrHistory;
 use App\Models\TipoPqr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Services\AuditLogger;
+use Illuminate\Support\Carbon;
 
 class PqrController extends Controller
 {
@@ -50,17 +52,17 @@ class PqrController extends Controller
             'asunto' => 'required|string|max:150',
             'descripcion' => 'required|string',
             'fecha_radicacion' => 'required|date',
-            'fecha_limite_respuesta' => 'nullable|date',
             'tipo_pqr_id' => 'required|exists:tipo_pqrs,id',
         ]);
 
         $data = $request->only([
-            'asunto', 'descripcion', 'fecha_radicacion',
-            'fecha_limite_respuesta', 'tipo_pqr_id',
+            'asunto', 'descripcion', 'fecha_radicacion', 'tipo_pqr_id',
         ]);
+        $data['fecha_limite_respuesta'] = Carbon::parse($data['fecha_radicacion'])->addDays(15)->toDateString();
         $data['user_id'] = $request->user()->id;
 
-        Pqr::create($data);
+        $pqr = Pqr::create($data);
+        AuditLogger::log($request, 'PQR', 'crear', "Creó la PQR #{$pqr->id}: {$pqr->asunto}", $pqr, null, $pqr->getAttributes());
 
         return redirect()->route('pqrs.index')->with('success', 'PQR creada correctamente.');
     }
@@ -82,7 +84,6 @@ class PqrController extends Controller
             'asunto' => 'required|string|max:150',
             'descripcion' => 'required|string',
             'fecha_radicacion' => 'required|date',
-            'fecha_limite_respuesta' => 'nullable|date',
             'tipo_pqr_id' => 'required|exists:tipo_pqrs,id',
         ];
 
@@ -93,8 +94,7 @@ class PqrController extends Controller
         $request->validate($rules);
 
         $fields = [
-            'asunto', 'descripcion', 'fecha_radicacion',
-            'fecha_limite_respuesta', 'tipo_pqr_id',
+            'asunto', 'descripcion', 'fecha_radicacion', 'tipo_pqr_id',
         ];
 
         if ($request->user()->rol === 'admin') {
@@ -102,9 +102,20 @@ class PqrController extends Controller
         }
 
         $data = $request->only($fields);
+        $data['fecha_limite_respuesta'] = Carbon::parse($data['fecha_radicacion'])->addDays(15)->toDateString();
         $original = $pqr->only(array_keys($data));
 
         $pqr->update($data);
+
+        $changes = collect($pqr->getChanges())->except('updated_at')->all();
+        if ($changes !== []) {
+            $oldValues = collect($changes)->mapWithKeys(fn ($value, $field) => [$field => $original[$field] ?? null])->all();
+            AuditLogger::log($request, 'PQR', 'actualizar', "Actualizó la PQR #{$pqr->id}: {$pqr->asunto}", $pqr, $oldValues, $changes);
+
+            if (array_key_exists('estado', $changes)) {
+                AuditLogger::log($request, 'PQR', 'cambiar_estado', "Cambió el estado de la PQR #{$pqr->id}", $pqr, ['estado' => $oldValues['estado']], ['estado' => $changes['estado']]);
+            }
+        }
 
         foreach ($pqr->getChanges() as $field => $newValue) {
             if ($field === 'updated_at') {
@@ -123,10 +134,12 @@ class PqrController extends Controller
         return redirect()->route('pqrs.index')->with('success', 'PQR actualizada correctamente.');
     }
 
-    public function destroy(Pqr $pqr)
+    public function destroy(Request $request, Pqr $pqr)
     {
         Gate::authorize('delete', $pqr);
 
+        $snapshot = $pqr->getAttributes();
+        AuditLogger::log($request, 'PQR', 'eliminar', "Eliminó la PQR #{$pqr->id}: {$pqr->asunto}", $pqr, $snapshot);
         $pqr->delete();
 
         return redirect()->route('pqrs.index')->with('success', 'PQR eliminada correctamente.');

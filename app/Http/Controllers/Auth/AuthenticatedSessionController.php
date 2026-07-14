@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use App\Services\AuditLogger;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -28,6 +29,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        AuditLogger::log($request, 'Autenticación', 'iniciar_sesion', 'Inició sesión en el sistema.');
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
@@ -36,6 +39,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        AuditLogger::log($request, 'Autenticación', 'cerrar_sesion', 'Cerró sesión en el sistema.');
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

@@ -27,7 +27,7 @@
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                            <tr><th class="px-4 py-3">Asunto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Radicación</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Acciones</th></tr>
+                            <tr><th class="px-4 py-3">Asunto</th><th class="px-4 py-3">Categoría</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Radicación</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Acciones</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($pqrs as $pqr)
@@ -42,7 +42,7 @@
                                 @endphp
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-gray-900">{{ $pqr->asunto }}</td>
-                                    <td class="px-4 py-3 text-gray-600">{{ $pqr->tipoPqr?->nombre ?? 'Sin tipo' }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $pqr->tipoPqr?->nombre ?? 'Sin categoría' }}</td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $estado['class'] }}">
                                             {{ $estado['label'] }}
