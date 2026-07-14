@@ -249,6 +249,122 @@ Laravel ejecuta este comando diariamente a las `08:00`, utilizando la zona horar
 
 Las credenciales SMTP se definen en el archivo `.env`. Después de configurarlas, un administrador puede enviar un correo de prueba desde el módulo de configuración para verificar la conexión.
 
-## Evidencia de funcionamiento
+## Reportes y configuración general
 
-![Listado de PQRs](docs/evidencias/listado_pqrs.png)
+### Reportes de PQR
+
+Los administradores pueden generar reportes utilizando un rango de fechas. De forma predeterminada, el módulo presenta la información de los últimos 90 días.
+
+La vista previa incluye:
+
+- Total de PQR del periodo
+- Cantidad de solicitudes vencidas y próximas a vencer
+- Porcentaje de solicitudes atendidas
+- Distribución por estado y categoría
+- Primeros registros incluidos en el reporte
+- Actividad reciente de descargas y envíos
+
+El reporte completo puede descargarse en formato PDF o enviarse al correo del administrador autenticado. El documento contiene los datos generales del conjunto residencial, indicadores del periodo, alertas de vencimiento y el detalle de las PQR.
+
+### Configuración general
+
+Desde el módulo de configuración, los administradores pueden actualizar:
+
+- Nombre del conjunto residencial
+- NIT
+- Dirección
+- Teléfono
+- Correo de contacto
+
+Esta información se utiliza en los reportes y comunicaciones generadas por el sistema.
+
+El plazo actual de respuesta es de 15 días calendario desde la fecha de radicación. Con este valor, el sistema calcula automáticamente la fecha límite de cada PQR.
+
+El módulo también muestra el estado de la configuración SMTP y permite enviar un correo de prueba cuando las credenciales han sido definidas correctamente en el archivo `.env`.
+
+## Datos iniciales y entorno de demostración
+
+Al ejecutar las migraciones con el seeder principal se crean:
+
+- Un usuario administrador
+- Las cinco categorías iniciales
+- Treinta PQR de ejemplo
+
+Credenciales del administrador inicial:
+
+```text
+Correo: admin@pqrs.com
+Contraseña: password
+```
+
+Estas credenciales son únicamente para desarrollo y deben cambiarse antes de utilizar la aplicación en otro entorno.
+
+### Datos de demostración
+
+El proyecto incluye un conjunto más completo de datos académicos con 14 usuarios y 40 PQR distribuidas entre diferentes estados, categorías y fechas.
+
+Para cargar o reemplazar estos datos:
+
+```bash
+./vendor/bin/sail artisan demo:seed
+```
+
+La contraseña común de los usuarios de demostración es:
+
+```text
+DemoPQRS2026!
+```
+
+Algunos usuarios disponibles son:
+
+```text
+laura.admin@demo-pqrs.example.com
+carlos.admin@demo-pqrs.example.com
+residente01@demo-pqrs.example.com
+```
+
+Para eliminar únicamente los registros de demostración, conservando los datos reales:
+
+```bash
+./vendor/bin/sail artisan demo:clear
+```
+
+## Pruebas automatizadas
+
+La suite incluye pruebas para autenticación, perfiles, PQR, usuarios, auditoría, configuración, notificaciones y reportes.
+
+Las pruebas se ejecutan con:
+
+```bash
+./vendor/bin/sail artisan test
+```
+
+## Evidencias de funcionamiento
+
+### Inicio de sesión
+
+![Inicio de sesión](docs/evidencias/01_inicio_sesion.png)
+
+### Dashboard
+
+![Dashboard](docs/evidencias/02_dashboard.png)
+
+### Gestión de PQR
+
+![Listado de PQR](docs/evidencias/03_listado_pqrs.png)
+
+### Gestión de usuarios
+
+![Gestión de usuarios](docs/evidencias/04_gestion_usuarios.png)
+
+### Auditoría
+
+![Auditoría](docs/evidencias/05_auditoria.png)
+
+### Reportes
+
+![Reportes de PQR](docs/evidencias/06_reportes.png)
+
+### Configuración
+
+![Configuración general](docs/evidencias/07_configuracion.png)
