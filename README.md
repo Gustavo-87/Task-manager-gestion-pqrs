@@ -164,16 +164,90 @@ Cada usuario puede encontrarse activo o inactivo. Cuando una cuenta es desactiva
 
 Un administrador no puede desactivar su propia cuenta, quitarse el rol de administrador ni eliminar su propio usuario desde el módulo administrativo.
 
-## Funcionalidades implementadas
+## Gestión operativa
 
-- Listado de PQRs
-- Creación de PQRs
-- Edición de PQRs
-- Eliminación de PQRs
-- Búsqueda por asunto
-- Filtro por estado
-- Relación entre PQR y TipoPqr
-- Relación entre PQR y User
+### Dashboard
+
+El dashboard presenta un resumen de las PQR según el alcance del usuario:
+
+- Total de PQR y distribución por estado
+- Solicitudes vencidas pendientes de respuesta
+- Solicitudes que vencen hoy o mañana
+- Últimas PQR registradas
+
+Los administradores consultan información global, mientras que los residentes solo visualizan sus propios registros.
+
+### Gestión de PQR
+
+El módulo permite:
+
+- Crear, consultar, editar y eliminar PQR según los permisos del usuario
+- Buscar por asunto y filtrar por estado
+- Clasificar cada solicitud por categoría
+- Consultar las fechas de radicación y límite de respuesta
+- Identificar visualmente el estado y las solicitudes vencidas
+- Calcular automáticamente la fecha límite de respuesta
+- Registrar el historial de los campos modificados
+
+Las PQR utilizan los estados `radicada`, `en_revision`, `respondida` y `cerrada`. Solo los administradores pueden cambiar el estado o eliminar registros.
+
+### Gestión de usuarios
+
+Los administradores pueden:
+
+- Crear, editar y eliminar usuarios
+- Asignar los roles `admin` y `residente`
+- Activar o desactivar cuentas
+- Restablecer contraseñas
+- Buscar por nombre o correo
+- Filtrar por rol y estado de la cuenta
+
+### Categorías de PQR
+
+Los administradores pueden crear y editar las categorías utilizadas para clasificar las solicitudes.
+
+Una categoría con PQR asociadas no puede eliminarse, pero puede desactivarse. Las categorías inactivas dejan de estar disponibles para nuevas solicitudes sin afectar los registros existentes.
+
+## Auditoría y notificaciones
+
+### Auditoría
+
+El sistema registra las operaciones relevantes realizadas sobre PQR, usuarios, categorías, configuración, reportes y notificaciones.
+
+Cada registro puede incluir:
+
+- Usuario responsable
+- Módulo y acción ejecutada
+- Descripción de la operación
+- Valores anteriores y nuevos
+- Dirección IP y navegador
+- Fecha y hora
+
+Las contraseñas y otros datos sensibles se excluyen de los valores almacenados. El módulo es de solo lectura y permite buscar por descripción y filtrar por usuario, módulo, acción o rango de fechas. Su consulta está restringida a los administradores.
+
+### Notificaciones por correo
+
+El sistema puede enviar correos en los siguientes casos:
+
+- Cuando un administrador cambia el estado de una PQR, se notifica al residente propietario.
+- Cuando una PQR vence hoy o mañana, se envía una alerta a los administradores activos.
+- Cuando se genera un reporte, puede enviarse al correo del administrador.
+
+Los envíos exitosos y fallidos quedan registrados en la auditoría. El sistema también controla los recordatorios enviados para evitar duplicados durante la misma fecha.
+
+### Recordatorios de vencimiento
+
+El comando encargado de procesar las alertas es:
+
+```bash
+./vendor/bin/sail artisan pqrs:notify-deadlines
+```
+
+Laravel ejecuta este comando diariamente a las `08:00`, utilizando la zona horaria `America/Bogota`. El servicio `scheduler` definido en Docker Compose mantiene activo el planificador de tareas.
+
+### Configuración del correo
+
+Las credenciales SMTP se definen en el archivo `.env`. Después de configurarlas, un administrador puede enviar un correo de prueba desde el módulo de configuración para verificar la conexión.
 
 ## Evidencia de funcionamiento
 
