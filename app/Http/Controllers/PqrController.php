@@ -203,6 +203,44 @@ class PqrController extends Controller
         return redirect()->route('pqrs.edit', $pqr)->with('success', 'La PQR fue respondida correctamente.');
     }
 
+    public function updateResponse(Request $request, Pqr $pqr)
+    {
+        Gate::authorize('updateResponse', $pqr);
+
+        $validated = $request->validate([
+            'respuesta' => ['required', 'string', 'max:10000'],
+        ]);
+        $previousResponse = $pqr->respuesta;
+
+        DB::transaction(function () use ($request, $pqr, $validated, $previousResponse): void {
+            $pqr->update([
+                'respuesta' => $validated['respuesta'],
+                'respondida_en' => now(),
+                'respondida_por' => $request->user()->id,
+            ]);
+
+            PqrHistory::create([
+                'pqr_id' => $pqr->id,
+                'campo' => 'respuesta',
+                'valor_anterior' => $previousResponse,
+                'valor_nuevo' => $validated['respuesta'],
+                'user_id' => $request->user()->id,
+            ]);
+
+            AuditLogger::log(
+                $request,
+                'PQR',
+                'editar_respuesta',
+                "Editó la respuesta de la PQR #{$pqr->id}: {$pqr->asunto}",
+                $pqr,
+                ['respuesta' => $previousResponse],
+                ['respuesta' => $validated['respuesta']],
+            );
+        });
+
+        return redirect()->route('pqrs.edit', $pqr)->with('success', 'La respuesta fue actualizada correctamente.');
+    }
+
     public function destroy(Request $request, Pqr $pqr)
     {
         Gate::authorize('delete', $pqr);

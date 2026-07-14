@@ -15,6 +15,7 @@ class Pqr extends Model
         'respuesta',
         'fecha_radicacion',
         'fecha_limite_respuesta',
+        'respondida_en',
         'estado',
         'user_id',
         'respondida_por',

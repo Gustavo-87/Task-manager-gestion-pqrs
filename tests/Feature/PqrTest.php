@@ -176,4 +176,49 @@ class PqrTest extends TestCase
 
         $this->assertSame('en_revision', $pqr->fresh()->estado);
     }
+
+    public function test_admin_can_edit_an_existing_response_and_preserve_its_history(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create([
+            'estado' => 'respondida',
+            'respuesta' => 'Respuesta inicial.',
+            'respondida_en' => now()->subDay(),
+            'respondida_por' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('pqrs.response.update', $pqr), ['respuesta' => 'Respuesta actualizada por una novedad.'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+
+        $this->assertDatabaseHas('pqrs', [
+            'id' => $pqr->id,
+            'respuesta' => 'Respuesta actualizada por una novedad.',
+            'estado' => 'respondida',
+            'respondida_por' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('pqr_histories', [
+            'pqr_id' => $pqr->id,
+            'campo' => 'respuesta',
+            'valor_anterior' => 'Respuesta inicial.',
+            'valor_nuevo' => 'Respuesta actualizada por una novedad.',
+            'user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_resident_cannot_edit_an_existing_response(): void
+    {
+        $resident = User::factory()->create(['rol' => 'residente']);
+        $pqr = Pqr::factory()->create([
+            'user_id' => $resident->id,
+            'estado' => 'respondida',
+            'respuesta' => 'Respuesta inicial.',
+        ]);
+
+        $this->actingAs($resident)
+            ->patch(route('pqrs.response.update', $pqr), ['respuesta' => 'Cambio no autorizado.'])
+            ->assertForbidden();
+
+        $this->assertSame('Respuesta inicial.', $pqr->fresh()->respuesta);
+    }
 }

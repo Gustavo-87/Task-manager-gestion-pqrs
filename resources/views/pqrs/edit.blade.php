@@ -27,6 +27,23 @@
                         @if($pqr->respondida_en) el {{ $pqr->respondida_en->format('d/m/Y \a \l\a\s H:i') }} @endif
                     </p>
                 </div>
+                @can('updateResponse', $pqr)
+                    <div class="mt-4" x-data="{ editingResponse: {{ $errors->has('respuesta') ? 'true' : 'false' }} }">
+                        <button type="button" x-show="!editingResponse" x-on:click="editingResponse = true" class="rounded-lg border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50">Editar respuesta</button>
+                        <form x-show="editingResponse" x-cloak method="POST" action="{{ route('pqrs.response.update', $pqr) }}" class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                            @csrf
+                            @method('PATCH')
+                            <label for="respuesta_editar" class="block text-sm font-semibold text-slate-700">Editar respuesta <span class="text-rose-500">*</span></label>
+                            <textarea id="respuesta_editar" name="respuesta" rows="7" required maxlength="10000" class="mt-2 block w-full rounded-lg border-slate-300 bg-white text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('respuesta', $pqr->respuesta) }}</textarea>
+                            <x-input-error :messages="$errors->get('respuesta')" class="mt-2" />
+                            <p class="mt-2 text-xs text-indigo-700">La versión anterior permanecerá disponible en el historial de la PQR.</p>
+                            <div class="mt-4 flex justify-end gap-3">
+                                <button type="button" x-on:click="editingResponse = false" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+                                <button class="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700" onclick="return confirm('¿Confirmas que deseas actualizar la respuesta?')">Guardar cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                @endcan
             @else
                 @can('respond', $pqr)
                     <form method="POST" action="{{ route('pqrs.respond', $pqr) }}" class="mt-5">

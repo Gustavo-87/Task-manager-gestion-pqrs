@@ -28,6 +28,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('pqrs', PqrController::class)->except('show');
     Route::post('/pqrs/{pqr}/responder', [PqrController::class, 'respond'])
         ->name('pqrs.respond');
+    Route::patch('/pqrs/{pqr}/respuesta', [PqrController::class, 'updateResponse'])
+        ->name('pqrs.response.update');
 
     Route::resource('usuarios', UserController::class)
         ->except('show')
