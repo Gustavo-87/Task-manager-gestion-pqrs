@@ -1,0 +1,128 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Pqr;
+use App\Models\TipoPqr;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class PqrTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_authenticated_user_can_create_a_pqr(): void
+    {
+        $user = User::factory()->create();
+        $tipo = TipoPqr::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('pqrs.store'), [
+            'asunto' => 'Solicitud de información',
+            'descripcion' => 'Necesito conocer el estado de mi solicitud.',
+            'fecha_radicacion' => '2026-07-14',
+            'fecha_limite_respuesta' => '2026-07-30',
+            'tipo_pqr_id' => $tipo->id,
+        ]);
+
+        $response->assertRedirect(route('pqrs.index'));
+        $this->assertDatabaseHas('pqrs', [
+            'asunto' => 'Solicitud de información',
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_updating_a_pqr_records_its_history(): void
+    {
+        $user = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create(['estado' => 'radicada']);
+
+        $response = $this->actingAs($user)->put(route('pqrs.update', $pqr), [
+            'asunto' => $pqr->asunto,
+            'descripcion' => $pqr->descripcion,
+            'fecha_radicacion' => $pqr->fecha_radicacion->format('Y-m-d'),
+            'fecha_limite_respuesta' => $pqr->fecha_limite_respuesta->format('Y-m-d'),
+            'estado' => 'en_revision',
+            'tipo_pqr_id' => $pqr->tipo_pqr_id,
+        ]);
+
+        $response->assertRedirect(route('pqrs.index'));
+        $this->assertDatabaseHas('pqr_histories', [
+            'pqr_id' => $pqr->id,
+            'campo' => 'estado',
+            'valor_anterior' => 'radicada',
+            'valor_nuevo' => 'en_revision',
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_resident_only_sees_their_own_pqrs(): void
+    {
+        $resident = User::factory()->create(['rol' => 'residente']);
+        $ownPqr = Pqr::factory()->create(['user_id' => $resident->id]);
+        $otherPqr = Pqr::factory()->create();
+
+        $response = $this->actingAs($resident)->get(route('pqrs.index'));
+
+        $response->assertOk();
+        $response->assertSee($ownPqr->asunto);
+        $response->assertDontSee($otherPqr->asunto);
+    }
+
+    public function test_resident_cannot_edit_another_users_pqr(): void
+    {
+        $resident = User::factory()->create(['rol' => 'residente']);
+        $otherPqr = Pqr::factory()->create();
+
+        $this->actingAs($resident)
+            ->get(route('pqrs.edit', $otherPqr))
+            ->assertForbidden();
+    }
+
+    public function test_resident_cannot_change_status_or_delete_a_pqr(): void
+    {
+        $resident = User::factory()->create(['rol' => 'residente']);
+        $pqr = Pqr::factory()->create([
+            'user_id' => $resident->id,
+            'estado' => 'radicada',
+        ]);
+
+        $this->actingAs($resident)->put(route('pqrs.update', $pqr), [
+            'asunto' => 'Asunto actualizado',
+            'descripcion' => $pqr->descripcion,
+            'fecha_radicacion' => $pqr->fecha_radicacion->format('Y-m-d'),
+            'fecha_limite_respuesta' => $pqr->fecha_limite_respuesta->format('Y-m-d'),
+            'estado' => 'cerrada',
+            'tipo_pqr_id' => $pqr->tipo_pqr_id,
+        ])->assertRedirect(route('pqrs.index'));
+
+        $this->assertDatabaseHas('pqrs', [
+            'id' => $pqr->id,
+            'asunto' => 'Asunto actualizado',
+            'estado' => 'radicada',
+        ]);
+
+        $this->actingAs($resident)
+            ->delete(route('pqrs.destroy', $pqr))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('pqrs', ['id' => $pqr->id]);
+    }
+
+    public function test_admin_can_see_and_delete_any_pqr(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create();
+
+        $this->actingAs($admin)
+            ->get(route('pqrs.index'))
+            ->assertOk()
+            ->assertSee($pqr->asunto);
+
+        $this->actingAs($admin)
+            ->delete(route('pqrs.destroy', $pqr))
+            ->assertRedirect(route('pqrs.index'));
+
+        $this->assertDatabaseMissing('pqrs', ['id' => $pqr->id]);
+    }
+}

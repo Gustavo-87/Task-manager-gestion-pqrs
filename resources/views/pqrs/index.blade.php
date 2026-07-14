@@ -1,114 +1,61 @@
-@extends('layouts.app')
-
-@section('titulo', 'Listado de PQRs')
-@section('titulo_pagina', 'Listado de PQRs')
-
-@section('contenido')
-    <div class="row mb-3">
-        <div class="col-md-4">
-            <a href="{{ route('pqrs.create') }}" class="btn btn-primary">
-                Nueva PQR
-            </a>
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800">Gestión de PQR</h2>
+            <a href="{{ route('pqrs.create') }}" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Nueva PQR</a>
         </div>
+    </x-slot>
 
-        <div class="col-md-8">
-            <form method="GET" action="{{ route('pqrs.index') }}" class="row g-2">
-                <div class="col-md-6">
-                    <input
-                        type="text"
-                        name="buscar"
-                        class="form-control"
-                        placeholder="Buscar por asunto..."
-                        value="{{ request('buscar') }}"
-                    >
-                </div>
+    <div class="py-8">
+        <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+            @if (session('success'))
+                <div class="rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('success') }}</div>
+            @endif
 
-                <div class="col-md-4">
-                    <select name="estado" class="form-select">
-                        <option value="">Todos los estados</option>
-                        <option value="radicada" {{ request('estado') == 'radicada' ? 'selected' : '' }}>Radicada</option>
-                        <option value="en_revision" {{ request('estado') == 'en_revision' ? 'selected' : '' }}>En revisión</option>
-                        <option value="respondida" {{ request('estado') == 'respondida' ? 'selected' : '' }}>Respondida</option>
-                        <option value="cerrada" {{ request('estado') == 'cerrada' ? 'selected' : '' }}>Cerrada</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-secondary w-100">
-                        Filtrar
-                    </button>
-                </div>
+            <form method="GET" action="{{ route('pqrs.index') }}" class="grid gap-3 rounded-lg bg-white p-4 shadow sm:grid-cols-4">
+                <input type="text" name="buscar" value="{{ request('buscar') }}" placeholder="Buscar por asunto..." class="rounded-md border-gray-300 sm:col-span-2">
+                <select name="estado" class="rounded-md border-gray-300">
+                    <option value="">Todos los estados</option>
+                    @foreach (['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada'] as $value => $label)
+                        <option value="{{ $value }}" @selected(request('estado') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Filtrar</button>
             </form>
+
+            <div class="overflow-hidden rounded-lg bg-white shadow">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
+                            <tr><th class="px-4 py-3">Asunto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Radicación</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Acciones</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse ($pqrs as $pqr)
+                                <tr>
+                                    <td class="px-4 py-3 font-medium text-gray-900">{{ $pqr->asunto }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $pqr->tipoPqr?->nombre ?? 'Sin tipo' }}</td>
+                                    <td class="px-4 py-3"><span class="rounded-full bg-indigo-50 px-2 py-1 text-xs text-indigo-700">{{ str_replace('_', ' ', $pqr->estado) }}</span></td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $pqr->fecha_radicacion }}</td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $pqr->user?->name ?? 'Sin usuario' }}</td>
+                                    <td class="px-4 py-3">
+                                        <div class="flex gap-3">
+                                            <a href="{{ route('pqrs.edit', $pqr) }}" class="font-medium text-indigo-600 hover:text-indigo-800">Editar</a>
+                                            @can('delete', $pqr)
+                                                <form action="{{ route('pqrs.destroy', $pqr) }}" method="POST" onsubmit="return confirm('¿Eliminar esta PQR?')">
+                                                    @csrf @method('DELETE')
+                                                    <button class="font-medium text-red-600 hover:text-red-800">Eliminar</button>
+                                                </form>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="px-4 py-10 text-center text-gray-500">No hay PQR registradas.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Asunto</th>
-                        <th>Tipo</th>
-                        <th>Estado</th>
-                        <th>Fecha radicación</th>
-                        <th>Fecha límite</th>
-                        <th>Usuario</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse ($pqrs as $pqr)
-                        <tr>
-                            <td>{{ $pqr->id }}</td>
-                            <td>{{ $pqr->asunto }}</td>
-                            <td>{{ $pqr->tipoPqr?->nombre ?? 'Sin tipo' }}</td>
-                            <td>
-                                @php
-                                    $color = match($pqr->estado) {
-                                        'respondida' => 'success',
-                                        'cerrada' => 'secondary',
-                                        'en_revision' => 'warning',
-                                        default => 'primary',
-                                    };
-                                @endphp
-
-                                <span class="badge bg-{{ $color }}">
-                                    {{ str_replace('_', ' ', $pqr->estado) }}
-                                </span>
-                            </td>
-                            <td>{{ $pqr->fecha_radicacion }}</td>
-                            <td>{{ $pqr->fecha_limite_respuesta ?? 'No definida' }}</td>
-                            <td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td>
-                            <td>
-                                <a href="{{ route('pqrs.edit', $pqr->id) }}" class="btn btn-sm btn-warning">
-                                    Editar
-                                </a>
-
-                                <form action="{{ route('pqrs.destroy', $pqr->id) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-
-                                    <button
-                                        type="submit"
-                                        class="btn btn-sm btn-danger"
-                                        onclick="return confirm('¿Eliminar esta PQR?')"
-                                    >
-                                        Eliminar
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="text-center text-muted">
-                                No hay PQRs registradas.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-@endsection
+</x-app-layout>

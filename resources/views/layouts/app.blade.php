@@ -1,44 +1,36 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión PQRs - @yield('titulo', 'Panel')</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-2 min-vh-100 bg-primary p-3">
-                <h5 class="text-white mb-4">Gestión PQRs</h5>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{{ route('pqrs.index') }}">
-                            Listado de PQRs
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+        <title>{{ config('app.name', 'Laravel') }}</title>
 
-            <main class="col-md-10 p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h1 class="h3">@yield('titulo_pagina', 'Panel')</h1>
-                    <span class="badge bg-primary">Cartago, Valle</span>
-                </div>
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <!-- Scripts -->
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="font-sans antialiased">
+        <div class="min-h-screen bg-gray-100">
+            @include('layouts.navigation')
+
+            <!-- Page Heading -->
+            @isset($header)
+                <header class="bg-white shadow">
+                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                        {{ $header }}
                     </div>
-                @endif
+                </header>
+            @endisset
 
-                @yield('contenido')
+            <!-- Page Content -->
+            <main>
+                {{ $slot }}
             </main>
         </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    </body>
 </html>

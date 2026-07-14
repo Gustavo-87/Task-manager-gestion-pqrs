@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\TipoPqr;
 use App\Models\Pqr;
+use App\Models\TipoPqr;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $user = User::factory()->create([
             'name' => 'Admin PQR',
             'email' => 'admin@pqrs.com',
+            'rol' => 'admin',
         ]);
 
         $tipos = collect([

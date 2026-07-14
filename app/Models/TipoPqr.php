@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class TipoPqr extends Model
 {
     use HasFactory;
+
     protected $fillable = ['nombre', 'descripcion'];
 
     public function pqrs()

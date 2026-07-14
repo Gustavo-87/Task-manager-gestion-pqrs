@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
 use App\Models\TipoPqr;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PqrFactory extends Factory

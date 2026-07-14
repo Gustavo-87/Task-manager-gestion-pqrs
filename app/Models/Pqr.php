@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Database\Eloquent\Model;
 
 class Pqr extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'asunto',
         'descripcion',
@@ -19,6 +19,14 @@ class Pqr extends Model
         'tipo_pqr_id',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'fecha_radicacion' => 'date',
+            'fecha_limite_respuesta' => 'date',
+        ];
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -27,6 +35,11 @@ class Pqr extends Model
     public function tipoPqr()
     {
         return $this->belongsTo(TipoPqr::class);
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(PqrHistory::class);
     }
 
     public function scopeRespondidas($query)
