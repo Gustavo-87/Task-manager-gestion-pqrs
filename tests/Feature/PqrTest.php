@@ -126,4 +126,54 @@ class PqrTest extends TestCase
 
         $this->assertDatabaseMissing('pqrs', ['id' => $pqr->id]);
     }
+
+    public function test_admin_can_respond_to_a_pqr(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create(['estado' => 'en_revision']);
+
+        $this->actingAs($admin)
+            ->post(route('pqrs.respond', $pqr), ['respuesta' => 'La reparación quedó programada para mañana.'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+
+        $this->assertDatabaseHas('pqrs', [
+            'id' => $pqr->id,
+            'respuesta' => 'La reparación quedó programada para mañana.',
+            'estado' => 'respondida',
+            'respondida_por' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('pqr_histories', [
+            'pqr_id' => $pqr->id,
+            'campo' => 'respuesta',
+            'user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_resident_cannot_respond_to_a_pqr(): void
+    {
+        $resident = User::factory()->create(['rol' => 'residente']);
+        $pqr = Pqr::factory()->create(['user_id' => $resident->id, 'estado' => 'en_revision']);
+
+        $this->actingAs($resident)
+            ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Respuesta no autorizada.'])
+            ->assertForbidden();
+
+        $this->assertNull($pqr->fresh()->respuesta);
+    }
+
+    public function test_pqr_cannot_be_marked_as_answered_without_a_response(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create(['estado' => 'en_revision']);
+
+        $this->actingAs($admin)->put(route('pqrs.update', $pqr), [
+            'asunto' => $pqr->asunto,
+            'descripcion' => $pqr->descripcion,
+            'fecha_radicacion' => $pqr->fecha_radicacion->format('Y-m-d'),
+            'estado' => 'respondida',
+            'tipo_pqr_id' => $pqr->tipo_pqr_id,
+        ])->assertSessionHasErrors('estado');
+
+        $this->assertSame('en_revision', $pqr->fresh()->estado);
+    }
 }

@@ -11,6 +11,12 @@
             <tr><td style="padding:9px;border-bottom:1px solid #e5e7eb"><strong>Estado anterior</strong></td><td style="padding:9px;border-bottom:1px solid #e5e7eb">{{ $previousStatus }}</td></tr>
             <tr><td style="padding:9px"><strong>Estado nuevo</strong></td><td style="padding:9px">{{ $newStatus }}</td></tr>
         </table>
+        @if($pqr->respuesta && $pqr->estado === 'respondida')
+            <div style="margin:20px 0;padding:16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px">
+                <strong>Respuesta</strong>
+                <p style="margin:10px 0 0;white-space:pre-line">{{ $pqr->respuesta }}</p>
+            </div>
+        @endif
         <p style="color:#6b7280;font-size:13px">Este es un mensaje automático. No respondas a este correo.</p>
     </div>
 </div></body></html>

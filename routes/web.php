@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\PqrController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PqrController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,6 +26,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('pqrs', PqrController::class)->except('show');
+    Route::post('/pqrs/{pqr}/responder', [PqrController::class, 'respond'])
+        ->name('pqrs.respond');
 
     Route::resource('usuarios', UserController::class)
         ->except('show')

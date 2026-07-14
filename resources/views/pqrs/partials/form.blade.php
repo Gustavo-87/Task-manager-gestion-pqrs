@@ -52,7 +52,8 @@
             <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between gap-3"><h2 class="font-semibold text-slate-900">Estado</h2><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoClase()" x-text="{radicada:'Radicada',en_revision:'En revisión',respondida:'Respondida',cerrada:'Cerrada'}[estado]"></span></div>
                 <select id="estado" name="estado" required x-model="estado" class="mt-4 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    @foreach (['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada'] as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
+                    @php($estadosDisponibles = $pqr->respuesta ? ['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada'] : ['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'cerrada' => 'Cerrada'])
+                    @foreach ($estadosDisponibles as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
                 </select>
                 <p class="mt-2 text-xs text-slate-500">El residente recibirá un correo cuando cambies el estado.</p>
                 <x-input-error :messages="$errors->get('estado')" class="mt-2" />

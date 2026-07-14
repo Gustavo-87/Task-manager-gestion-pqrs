@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppSetting;
 use App\Models\Pqr;
 use App\Models\PqrHistory;
 use App\Models\TipoPqr;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use App\Services\AuditLogger;
-use Illuminate\Support\Carbon;
 use App\Services\PqrNotificationService;
-use App\Models\AppSetting;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class PqrController extends Controller
@@ -109,7 +110,10 @@ class PqrController extends Controller
         ];
 
         if ($request->user()->rol === 'admin') {
-            $rules['estado'] = 'required|in:radicada,en_revision,respondida,cerrada';
+            $allowedStatuses = $pqr->respuesta
+                ? ['radicada', 'en_revision', 'respondida', 'cerrada']
+                : ['radicada', 'en_revision', 'cerrada'];
+            $rules['estado'] = ['required', Rule::in($allowedStatuses)];
         }
 
         $request->validate($rules);
@@ -154,6 +158,49 @@ class PqrController extends Controller
         }
 
         return redirect()->route('pqrs.index')->with('success', 'PQR actualizada correctamente.');
+    }
+
+    public function respond(Request $request, Pqr $pqr, PqrNotificationService $notifications)
+    {
+        Gate::authorize('respond', $pqr);
+
+        $validated = $request->validate([
+            'respuesta' => ['required', 'string', 'max:10000'],
+        ]);
+        $previousStatus = $pqr->estado;
+
+        DB::transaction(function () use ($request, $pqr, $validated, $previousStatus): void {
+            $pqr->update([
+                'respuesta' => $validated['respuesta'],
+                'respondida_en' => now(),
+                'respondida_por' => $request->user()->id,
+                'estado' => 'respondida',
+            ]);
+
+            foreach (['respuesta', 'respondida_en', 'respondida_por', 'estado'] as $field) {
+                PqrHistory::create([
+                    'pqr_id' => $pqr->id,
+                    'campo' => $field,
+                    'valor_anterior' => $field === 'estado' ? $previousStatus : null,
+                    'valor_nuevo' => $pqr->{$field},
+                    'user_id' => $request->user()->id,
+                ]);
+            }
+
+            AuditLogger::log(
+                $request,
+                'PQR',
+                'responder',
+                "Respondió la PQR #{$pqr->id}: {$pqr->asunto}",
+                $pqr,
+                ['estado' => $previousStatus],
+                ['estado' => 'respondida', 'respuesta' => $validated['respuesta']],
+            );
+        });
+
+        $notifications->sendStatusChanged($request, $pqr->load('user'), $previousStatus, 'respondida');
+
+        return redirect()->route('pqrs.edit', $pqr)->with('success', 'La PQR fue respondida correctamente.');
     }
 
     public function destroy(Request $request, Pqr $pqr)

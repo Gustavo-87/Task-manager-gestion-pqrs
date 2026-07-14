@@ -32,4 +32,9 @@ class PqrPolicy
     {
         return $user->rol === 'admin';
     }
+
+    public function respond(User $user, Pqr $pqr): bool
+    {
+        return $user->rol === 'admin' && ! in_array($pqr->estado, ['respondida', 'cerrada'], true);
+    }
 }
