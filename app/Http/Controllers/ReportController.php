@@ -11,12 +11,37 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use App\Models\Audit;
+use Illuminate\Support\Carbon;
 
 class ReportController extends Controller
 {
-    public function index(): View
+    public function index(Request $request, PqrReportService $reports): View
     {
-        return view('reports.index');
+        $dateFrom = $request->date('date_from')?->toDateString() ?? Carbon::today()->subDays(90)->toDateString();
+        $dateTo = $request->date('date_to')?->toDateString() ?? Carbon::today()->toDateString();
+
+        if (Carbon::parse($dateTo)->isBefore(Carbon::parse($dateFrom))) {
+            $dateFrom = Carbon::today()->subDays(90)->toDateString();
+            $dateTo = Carbon::today()->toDateString();
+        }
+
+        $preview = $reports->data($dateFrom, $dateTo);
+        $attended = $preview['byStatus']['respondida'] + $preview['byStatus']['cerrada'];
+        $attendedPercentage = $preview['pqrs']->isEmpty()
+            ? 0
+            : (int) round(($attended / $preview['pqrs']->count()) * 100);
+
+        $recentReports = Audit::with('user')
+            ->where('module', 'Reportes')
+            ->whereIn('action', ['descargar', 'enviar_correo'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return view('reports.index', compact(
+            'dateFrom', 'dateTo', 'preview', 'attendedPercentage', 'recentReports'
+        ));
     }
 
     public function download(Request $request, PqrReportService $reports): Response
