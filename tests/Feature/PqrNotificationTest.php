@@ -41,10 +41,9 @@ class PqrNotificationTest extends TestCase
             'fecha_radicacion' => $pqr->fecha_radicacion->toDateString(),
             'tipo_pqr_id' => $tipo->id,
             'estado' => 'en_revision',
-        ])->assertRedirect(route('pqrs.index'));
+        ])->assertRedirect(route('pqrs.edit', $pqr));
 
-        Notification::assertSentTo($resident, PqrStatusChanged::class, fn ($notification) =>
-            $notification->previousStatus === 'radicada' && $notification->newStatus === 'en_revision'
+        Notification::assertSentTo($resident, PqrStatusChanged::class, fn ($notification) => $notification->previousStatus === 'radicada' && $notification->newStatus === 'en_revision'
         );
         $this->assertDatabaseHas('audits', [
             'module' => 'Notificaciones',
@@ -83,8 +82,7 @@ class PqrNotificationTest extends TestCase
 
         $this->artisan('pqrs:notify-deadlines')->assertSuccessful();
 
-        Notification::assertSentTo($admin, PqrDeadlineReminder::class, fn ($notification) =>
-            $notification->pqr->is($due) && $notification->daysRemaining === 0
+        Notification::assertSentTo($admin, PqrDeadlineReminder::class, fn ($notification) => $notification->pqr->is($due) && $notification->daysRemaining === 0
         );
         Notification::assertSentToTimes($admin, PqrDeadlineReminder::class, 1);
     }

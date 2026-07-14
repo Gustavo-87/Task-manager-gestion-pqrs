@@ -7,10 +7,10 @@
         <form method="POST" action="{{ route('pqrs.update', $pqr) }}" class="mx-auto max-w-5xl">
             @csrf @method('PUT')
             @include('pqrs.partials.form', ['editing' => true])
-            <div class="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+            @can('update', $pqr)<div class="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
                 <a href="{{ route('pqrs.index') }}" class="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</a>
-                <button class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Actualizar PQR</button>
-            </div>
+                <button class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Actualizar estado</button>
+            </div>@endcan
         </form>
 
         <section class="mx-auto mt-6 max-w-5xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -52,7 +52,7 @@
                         <textarea id="respuesta" name="respuesta" rows="7" required maxlength="10000" class="mt-2 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Escribe la respuesta clara y completa que recibirá el residente...">{{ old('respuesta') }}</textarea>
                         <x-input-error :messages="$errors->get('respuesta')" class="mt-2" />
                         <div class="mt-4 flex justify-end">
-                            <button class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700" onclick="return confirm('¿Confirmas que deseas emitir esta respuesta?')">Responder PQR</button>
+                            <button class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700" onclick="return confirm('¿Confirmas que deseas emitir esta respuesta?')">{{ in_array($pqr->estado, ['respondida', 'cerrada']) ? 'Registrar respuesta faltante' : 'Responder PQR' }}</button>
                         </div>
                     </form>
                 @else

@@ -68,7 +68,7 @@ class AuditTest extends TestCase
             'fecha_limite_respuesta' => null,
             'tipo_pqr_id' => $tipo->id,
             'estado' => 'en_revision',
-        ])->assertRedirect(route('pqrs.index'));
+        ])->assertRedirect(route('pqrs.edit', $pqr));
 
         $this->assertDatabaseHas('audits', ['module' => 'PQR', 'action' => 'crear', 'auditable_id' => $pqr->id]);
         $this->assertDatabaseHas('audits', ['module' => 'PQR', 'action' => 'cambiar_estado', 'auditable_id' => $pqr->id]);

@@ -86,7 +86,7 @@ class PqrController extends Controller
 
     public function edit(Pqr $pqr)
     {
-        Gate::authorize('update', $pqr);
+        Gate::authorize('view', $pqr);
 
         $tipos = TipoPqr::where('activo', true)
             ->orWhere('id', $pqr->tipo_pqr_id)
@@ -100,35 +100,10 @@ class PqrController extends Controller
     {
         Gate::authorize('update', $pqr);
 
-        $rules = [
-            'asunto' => 'required|string|max:150',
-            'descripcion' => 'required|string',
-            'fecha_radicacion' => 'required|date',
-            'tipo_pqr_id' => ['required', Rule::exists('tipo_pqrs', 'id')->where(
-                fn ($query) => $query->where('activo', true)->orWhere('id', $pqr->tipo_pqr_id)
-            )],
-        ];
-
-        if ($request->user()->rol === 'admin') {
-            $allowedStatuses = $pqr->respuesta
-                ? ['radicada', 'en_revision', 'respondida', 'cerrada']
-                : ['radicada', 'en_revision', 'cerrada'];
-            $rules['estado'] = ['required', Rule::in($allowedStatuses)];
-        }
-
-        $request->validate($rules);
-
-        $fields = [
-            'asunto', 'descripcion', 'fecha_radicacion', 'tipo_pqr_id',
-        ];
-
-        if ($request->user()->rol === 'admin') {
-            $fields[] = 'estado';
-        }
-
-        $data = $request->only($fields);
-        $data['fecha_limite_respuesta'] = Carbon::parse($data['fecha_radicacion'])->addDays(AppSetting::current()->response_days)->toDateString();
-        $original = $pqr->only(array_keys($data));
+        $data = $request->validate([
+            'estado' => ['required', Rule::in(['radicada', 'en_revision', 'respondida', 'cerrada'])],
+        ]);
+        $original = ['estado' => $pqr->estado];
 
         $pqr->update($data);
 
@@ -157,7 +132,7 @@ class PqrController extends Controller
             ]);
         }
 
-        return redirect()->route('pqrs.index')->with('success', 'PQR actualizada correctamente.');
+        return redirect()->route('pqrs.edit', $pqr)->with('success', 'Estado actualizado correctamente.');
     }
 
     public function respond(Request $request, Pqr $pqr, PqrNotificationService $notifications)
@@ -168,13 +143,14 @@ class PqrController extends Controller
             'respuesta' => ['required', 'string', 'max:10000'],
         ]);
         $previousStatus = $pqr->estado;
+        $newStatus = $previousStatus === 'cerrada' ? 'cerrada' : 'respondida';
 
-        DB::transaction(function () use ($request, $pqr, $validated, $previousStatus): void {
+        DB::transaction(function () use ($request, $pqr, $validated, $previousStatus, $newStatus): void {
             $pqr->update([
                 'respuesta' => $validated['respuesta'],
                 'respondida_en' => now(),
                 'respondida_por' => $request->user()->id,
-                'estado' => 'respondida',
+                'estado' => $newStatus,
             ]);
 
             foreach (['respuesta', 'respondida_en', 'respondida_por', 'estado'] as $field) {
@@ -194,11 +170,11 @@ class PqrController extends Controller
                 "Respondió la PQR #{$pqr->id}: {$pqr->asunto}",
                 $pqr,
                 ['estado' => $previousStatus],
-                ['estado' => 'respondida', 'respuesta' => $validated['respuesta']],
+                ['estado' => $newStatus, 'respuesta' => $validated['respuesta']],
             );
         });
 
-        $notifications->sendStatusChanged($request, $pqr->load('user'), $previousStatus, 'respondida');
+        $notifications->sendStatusChanged($request, $pqr->load('user'), $previousStatus, $newStatus);
 
         return redirect()->route('pqrs.edit', $pqr)->with('success', 'La PQR fue respondida correctamente.');
     }

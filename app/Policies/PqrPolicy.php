@@ -24,8 +24,7 @@ class PqrPolicy
 
     public function update(User $user, Pqr $pqr): bool
     {
-        return $user->rol === 'admin'
-            || ($user->rol === 'residente' && $pqr->user_id === $user->id);
+        return $user->rol === 'admin';
     }
 
     public function delete(User $user, Pqr $pqr): bool
@@ -35,7 +34,7 @@ class PqrPolicy
 
     public function respond(User $user, Pqr $pqr): bool
     {
-        return $user->rol === 'admin' && ! in_array($pqr->estado, ['respondida', 'cerrada'], true);
+        return $user->rol === 'admin' && blank($pqr->respuesta);
     }
 
     public function updateResponse(User $user, Pqr $pqr): bool
