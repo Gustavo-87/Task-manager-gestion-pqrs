@@ -1,6 +1,6 @@
 # Gestión de PQRs para Conjuntos Residenciales
 
-Proyecto desarrollado en Laravel y MySQL como aplicación del proyecto guía Task Manager del seminario.
+Proyecto desarrollado con Laravel 13 y MySQL como aplicación del proyecto guía Task Manager del seminario.
 
 ## Descripción
 
@@ -54,18 +54,115 @@ Campos principales:
 - respondida
 - cerrada
 
-## Ejecución del proyecto
+## Requisitos
 
-Levantar los contenedores:
+- Docker con Docker Compose
+- Git
+- Composer, necesario para instalar inicialmente Laravel Sail
+
+El proyecto utiliza las siguientes tecnologías principales:
+
+- PHP 8.3 o superior
+- Laravel 13
+- MySQL 8.4
+- Laravel Sail
+- Vite, Tailwind CSS y Alpine.js
+
+## Instalación y ejecución
+
+Instalar las dependencias de PHP:
+
+```bash
+composer install
+```
+
+Crear el archivo de entorno:
+
+```bash
+cp .env.example .env
+```
+
+El archivo `.env.example` ya incluye la configuración de MySQL para la red interna de Sail:
+
+```dotenv
+APP_URL=http://localhost:8085
+APP_PORT=8085
+
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
+```
+
+Levantar los contenedores de la aplicación, MySQL y el planificador de tareas:
 
 ```bash
 ./vendor/bin/sail up -d
 ```
-## Ejecutar migraciones y seeders:
 
-./vendor/bin/sail php artisan migrate:fresh --seed
+Generar la clave de la aplicación:
 
-Abrir en el navegador: http://localhost:8085/pqrs
+```bash
+./vendor/bin/sail artisan key:generate
+```
+
+Ejecutar las migraciones y cargar los datos iniciales:
+
+```bash
+./vendor/bin/sail artisan migrate:fresh --seed
+```
+
+Instalar y compilar los recursos del frontend:
+
+```bash
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run build
+```
+
+La aplicación queda disponible en [http://localhost:8085](http://localhost:8085). Al ingresar, el sistema redirige a la pantalla de inicio de sesión.
+
+## Autenticación y control de acceso
+
+El sistema requiere autenticación para acceder al dashboard y gestionar las PQR. Incluye las siguientes funciones:
+
+- Registro de residentes
+- Inicio y cierre de sesión
+- Recuperación y restablecimiento de contraseña
+- Actualización del perfil y la contraseña
+- Confirmación de contraseña para operaciones protegidas
+- Control de acceso para cuentas activas
+
+Los usuarios registrados desde el formulario público reciben automáticamente el rol `residente`.
+
+### Roles y permisos
+
+El sistema maneja dos roles:
+
+| Función | Administrador | Residente |
+|---|:---:|:---:|
+| Consultar PQR | Todas | Solo las propias |
+| Crear PQR | Sí | Sí |
+| Editar PQR | Todas | Solo las propias |
+| Cambiar el estado de una PQR | Sí | No |
+| Eliminar PQR | Sí | No |
+| Gestionar usuarios | Sí | No |
+| Consultar auditoría | Sí | No |
+| Generar reportes | Sí | No |
+| Administrar categorías y configuración | Sí | No |
+
+Las políticas de autorización impiden que un residente consulte o modifique PQR pertenecientes a otros usuarios.
+
+### Estado de las cuentas
+
+Cada usuario puede encontrarse activo o inactivo. Cuando una cuenta es desactivada:
+
+- No puede iniciar sesión.
+- Si tenía una sesión abierta, se cierra automáticamente.
+- Se muestra un mensaje indicando que debe comunicarse con el administrador.
+
+Un administrador no puede desactivar su propia cuenta, quitarse el rol de administrador ni eliminar su propio usuario desde el módulo administrativo.
 
 ## Funcionalidades implementadas
 
@@ -81,4 +178,3 @@ Abrir en el navegador: http://localhost:8085/pqrs
 ## Evidencia de funcionamiento
 
 ![Listado de PQRs](docs/evidencias/listado_pqrs.png)
-

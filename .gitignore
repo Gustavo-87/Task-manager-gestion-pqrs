@@ -21,6 +21,15 @@
 /storage/*.key
 /storage/pail
 /vendor
+/AGENTS.md
+/HEARTBEAT.md
+/IDENTITY.md
+/MEMORY.md
+/SOUL.md
+/TOOLS.md
+/USER.md
+/memory/
+/openclaw-workspace-state.json
 _ide_helper.php
 Homestead.json
 Homestead.yaml
