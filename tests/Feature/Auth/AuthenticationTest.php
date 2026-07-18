@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -20,21 +21,48 @@ class AuthenticationTest extends TestCase
             ->assertSee('Iniciar sesión');
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_users_can_authenticate_using_login_and_valid_otp(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create();
 
-        $response = $this->post('/login', [
+        $loginResponse = $this->post('/login', [
             'email' => $user->email,
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $loginResponse
+            ->assertSessionHas('otp_user_id', $user->id)
+            ->assertRedirect(route('otp.verify'));
+
+        $this->assertGuest();
+
+        $user->refresh();
+
+        $this->assertNotNull($user->otp_code);
+        $this->assertNotNull($user->otp_expires_at);
+
+        $otpResponse = $this->post(route('otp.verify.post'), [
+            'code' => $user->otp_code,
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+
+        $otpResponse->assertRedirect(
+            route('dashboard', absolute: false)
+        );
+
+        $user->refresh();
+
+        $this->assertNull($user->otp_code);
+        $this->assertNull($user->otp_expires_at);
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create();
 
         $this->post('/login', [

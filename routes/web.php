@@ -4,6 +4,7 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OtpVerificationController;
 use App\Http\Controllers\PqrController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
@@ -16,6 +17,15 @@ Route::get('/', function () {
         : redirect()->route('login');
 });
 
+Route::get('/otp-verify', [OtpVerificationController::class, 'show'])
+    ->name('otp.verify');
+
+Route::post('/otp-verify', [OtpVerificationController::class, 'verify'])
+    ->name('otp.verify.post');
+
+Route::post('/otp-resend', [OtpVerificationController::class, 'resend'])
+    ->name('otp.resend');
+
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'active', 'verified'])
     ->name('dashboard');
@@ -26,8 +36,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('pqrs', PqrController::class)->except('show');
+
     Route::post('/pqrs/{pqr}/responder', [PqrController::class, 'respond'])
         ->name('pqrs.respond');
+
     Route::patch('/pqrs/{pqr}/respuesta', [PqrController::class, 'updateResponse'])
         ->name('pqrs.response.update');
 
@@ -43,16 +55,30 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->names('audits')
         ->middleware('admin');
 
-    Route::middleware('admin')->prefix('reportes')->name('reports.')->group(function () {
-        Route::get('/', [ReportController::class, 'index'])->name('index');
-        Route::post('/descargar', [ReportController::class, 'download'])->name('download');
-        Route::post('/enviar', [ReportController::class, 'email'])->name('email');
-    });
+    Route::middleware('admin')
+        ->prefix('reportes')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/', [ReportController::class, 'index'])
+                ->name('index');
+
+            Route::post('/descargar', [ReportController::class, 'download'])
+                ->name('download');
+
+            Route::post('/enviar', [ReportController::class, 'email'])
+                ->name('email');
+        });
 
     Route::middleware('admin')->group(function () {
-        Route::get('/configuracion', [ConfigurationController::class, 'index'])->name('configuration.index');
-        Route::put('/configuracion', [ConfigurationController::class, 'update'])->name('configuration.update');
-        Route::post('/configuracion/probar-correo', [ConfigurationController::class, 'testEmail'])->name('configuration.test-email');
+        Route::get('/configuracion', [ConfigurationController::class, 'index'])
+            ->name('configuration.index');
+
+        Route::put('/configuracion', [ConfigurationController::class, 'update'])
+            ->name('configuration.update');
+
+        Route::post('/configuracion/probar-correo', [ConfigurationController::class, 'testEmail'])
+            ->name('configuration.test-email');
+
         Route::resource('categorias', CategoryController::class)
             ->except(['index', 'show'])
             ->parameters(['categorias' => 'category'])

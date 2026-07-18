@@ -7,6 +7,7 @@ use App\Models\Pqr;
 use App\Models\TipoPqr;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class AuditTest extends TestCase
@@ -17,6 +18,7 @@ class AuditTest extends TestCase
     {
         $admin = User::factory()->create(['rol' => 'admin']);
         $resident = User::factory()->create(['rol' => 'residente']);
+
         $audit = Audit::create([
             'user_id' => $admin->id,
             'module' => 'Usuarios',
@@ -24,10 +26,22 @@ class AuditTest extends TestCase
             'description' => 'Registro de prueba',
         ]);
 
-        $this->actingAs($admin)->get(route('audits.index'))->assertOk()->assertSee('Registro de prueba');
-        $this->actingAs($admin)->get(route('audits.show', $audit))->assertOk();
-        $this->actingAs($resident)->get(route('audits.index'))->assertForbidden();
-        $this->actingAs($resident)->get(route('audits.show', $audit))->assertForbidden();
+        $this->actingAs($admin)
+            ->get(route('audits.index'))
+            ->assertOk()
+            ->assertSee('Registro de prueba');
+
+        $this->actingAs($admin)
+            ->get(route('audits.show', $audit))
+            ->assertOk();
+
+        $this->actingAs($resident)
+            ->get(route('audits.index'))
+            ->assertForbidden();
+
+        $this->actingAs($resident)
+            ->get(route('audits.show', $audit))
+            ->assertForbidden();
     }
 
     public function test_user_changes_are_audited_without_passwords(): void
@@ -42,7 +56,10 @@ class AuditTest extends TestCase
             'password_confirmation' => 'ClaveSegura2026!',
         ])->assertRedirect(route('users.index'));
 
-        $audit = Audit::where('module', 'Usuarios')->where('action', 'crear')->firstOrFail();
+        $audit = Audit::where('module', 'Usuarios')
+            ->where('action', 'crear')
+            ->firstOrFail();
+
         $this->assertSame($admin->id, $audit->user_id);
         $this->assertArrayNotHasKey('password', $audit->new_values);
         $this->assertSame('127.0.0.1', $audit->ip_address);
@@ -61,6 +78,7 @@ class AuditTest extends TestCase
         ])->assertRedirect(route('pqrs.index'));
 
         $pqr = Pqr::where('asunto', 'PQR auditable')->firstOrFail();
+
         $this->actingAs($admin)->put(route('pqrs.update', $pqr), [
             'asunto' => $pqr->asunto,
             'descripcion' => $pqr->descripcion,
@@ -70,19 +88,48 @@ class AuditTest extends TestCase
             'estado' => 'en_revision',
         ])->assertRedirect(route('pqrs.edit', $pqr));
 
-        $this->assertDatabaseHas('audits', ['module' => 'PQR', 'action' => 'crear', 'auditable_id' => $pqr->id]);
-        $this->assertDatabaseHas('audits', ['module' => 'PQR', 'action' => 'cambiar_estado', 'auditable_id' => $pqr->id]);
+        $this->assertDatabaseHas('audits', [
+            'module' => 'PQR',
+            'action' => 'crear',
+            'auditable_id' => $pqr->id,
+        ]);
+
+        $this->assertDatabaseHas('audits', [
+            'module' => 'PQR',
+            'action' => 'cambiar_estado',
+            'auditable_id' => $pqr->id,
+        ]);
     }
 
     public function test_successful_login_and_logout_are_audited(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create();
 
-        $this->post(route('login'), ['email' => $user->email, 'password' => 'password'])->assertRedirect();
-        $this->post(route('logout'))->assertRedirect(route('login'));
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('otp.verify'));
 
-        $this->assertDatabaseHas('audits', ['user_id' => $user->id, 'action' => 'iniciar_sesion']);
-        $this->assertDatabaseHas('audits', ['user_id' => $user->id, 'action' => 'cerrar_sesion']);
+        $user->refresh();
+
+        $this->post(route('otp.verify.post'), [
+            'code' => $user->otp_code,
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $this->post(route('logout'))
+            ->assertRedirect(route('login'));
+
+        $this->assertDatabaseHas('audits', [
+            'user_id' => $user->id,
+            'action' => 'iniciar_sesion',
+        ]);
+
+        $this->assertDatabaseHas('audits', [
+            'user_id' => $user->id,
+            'action' => 'cerrar_sesion',
+        ]);
     }
 
     public function test_audit_has_no_mutation_routes(): void

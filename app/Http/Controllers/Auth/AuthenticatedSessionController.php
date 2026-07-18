@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
-use App\Services\AuditLogger;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -29,9 +30,29 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        AuditLogger::log($request, 'Autenticación', 'iniciar_sesion', 'Inició sesión en el sistema.');
+        $user = Auth::user();
+        $remember = $request->boolean('remember');
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $otp = $user->generateOtp();
+
+        Mail::send(
+            'emails.otp',
+            [
+                'otp' => $otp,
+                'user' => $user,
+            ],
+            function ($message) use ($user) {
+                $message->to($user->email)
+                    ->subject('Código de verificación');
+            }
+        );
+
+        Auth::guard('web')->logout();
+
+        $request->session()->put('otp_user_id', $user->id);
+        $request->session()->put('otp_remember', $remember);
+
+        return redirect()->route('otp.verify');
     }
 
     /**
@@ -39,7 +60,12 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        AuditLogger::log($request, 'Autenticación', 'cerrar_sesion', 'Cerró sesión en el sistema.');
+        AuditLogger::log(
+            $request,
+            'Autenticación',
+            'cerrar_sesion',
+            'Cerró sesión en el sistema.'
+        );
 
         Auth::guard('web')->logout();
 
