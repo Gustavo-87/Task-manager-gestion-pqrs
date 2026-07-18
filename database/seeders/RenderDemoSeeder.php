@@ -21,12 +21,16 @@ class RenderDemoSeeder extends Seeder
             );
         }
 
-        $admin = User::firstOrNew([
-            'email' => 'admin.demo@gestionpqrs.test',
-        ]);
+        $admin = User::query()
+            ->whereIn('email', [
+                'gestionpqrs7@gmail.com',
+                'admin.demo@gestionpqrs.test',
+            ])
+            ->first() ?? new User();
 
         $admin->forceFill([
             'name' => 'Administrador Demostración',
+            'email' => 'gestionpqrs7@gmail.com',
             'password' => Hash::make($password),
             'rol' => 'admin',
             'activo' => true,
