@@ -23,6 +23,11 @@ php artisan storage:link --force || true
 echo "Ejecutando migraciones..."
 php artisan migrate --force
 
+if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
+    echo "Cargando datos de demostración..."
+    php artisan db:seed --class=RenderDemoSeeder --force
+fi
+
 PORT="${PORT:-10000}"
 sed "s/__PORT__/${PORT}/g"     /etc/nginx/nginx.conf.template     > /etc/nginx/nginx.conf
 
