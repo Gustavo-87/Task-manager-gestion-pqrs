@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 #[Fillable([
     'name',
@@ -24,7 +25,7 @@ use Illuminate\Notifications\Notifiable;
     'remember_token',
     'otp_code',
 ])]
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -76,6 +77,25 @@ class User extends Authenticatable
         }
 
         return hash_equals((string) $this->otp_code, $code);
+    }
+
+
+    /**
+     * Obtiene el identificador que se almacenará en el token JWT.
+     */
+    public function getJWTIdentifier(): mixed
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Define atributos personalizados para el token JWT.
+     *
+     * @return array<string, mixed>
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [];
     }
 
     public function pqrs()
