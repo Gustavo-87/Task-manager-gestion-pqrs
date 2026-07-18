@@ -13,13 +13,6 @@ else
     echo "ADVERTENCIA: DB_URL no está definida."
 fi
 
-php artisan optimize:clear
-php artisan config:cache
-php artisan view:cache
-
-# No se ejecuta route:cache porque routes/web.php contiene una ruta Closure.
-php artisan storage:link --force || true
-
 echo "Ejecutando migraciones..."
 php artisan migrate --force
 
@@ -28,8 +21,17 @@ if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
     php artisan db:seed --class=RenderDemoSeeder --force
 fi
 
+echo "Preparando cachés de producción..."
+php artisan optimize:clear
+php artisan config:cache
+php artisan view:cache
+php artisan storage:link --force || true
+
 PORT="${PORT:-10000}"
-sed "s/__PORT__/${PORT}/g"     /etc/nginx/nginx.conf.template     > /etc/nginx/nginx.conf
+
+sed "s/__PORT__/${PORT}/g" \
+    /etc/nginx/nginx.conf.template \
+    > /etc/nginx/nginx.conf
 
 echo "Nginx escuchará en el puerto ${PORT}."
 
