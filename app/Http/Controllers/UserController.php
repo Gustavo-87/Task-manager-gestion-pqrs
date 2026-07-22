@@ -13,12 +13,12 @@ class UserController extends Controller
 {
     public function index(Request $request): View
     {
-        $stats = User::query()
-            ->selectRaw('COUNT(*) as total')
-            ->selectRaw("SUM(CASE WHEN rol = 'admin' THEN 1 ELSE 0 END) as admins")
-            ->selectRaw("SUM(CASE WHEN rol = 'residente' THEN 1 ELSE 0 END) as residentes")
-            ->selectRaw("SUM(CASE WHEN activo = 0 THEN 1 ELSE 0 END) as inactivos")
-            ->first();
+       $stats = (object) [
+    'total' => User::count(),
+    'admins' => User::where('rol', 'admin')->count(),
+    'residentes' => User::where('rol', 'residente')->count(),
+    'inactivos' => User::where('activo', false)->count(),
+        ];
 
         $users = User::query()
             ->when($request->filled('buscar'), function ($query) use ($request) {

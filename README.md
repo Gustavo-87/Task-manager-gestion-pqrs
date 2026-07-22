@@ -99,7 +99,7 @@ DB_PASSWORD=password
 Levantar los contenedores de la aplicación, MySQL y el planificador de tareas:
 
 ```bash
-./vendor/bin/sail up -d
+
 ```
 
 Generar la clave de la aplicación:
@@ -128,7 +128,7 @@ La aplicación queda disponible en [http://localhost:8085](http://localhost:8085
 El sistema requiere autenticación para acceder al dashboard y gestionar las PQR. Incluye las siguientes funciones:
 
 - Registro de residentes
-- Inicio y cierre de sesión
+- Inicio y cierre./vendor/bin/sail up -d de sesión
 - Recuperación y restablecimiento de contraseña
 - Actualización del perfil y la contraseña
 - Confirmación de contraseña para operaciones protegidas
