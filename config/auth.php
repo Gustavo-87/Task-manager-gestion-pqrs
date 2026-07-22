@@ -119,4 +119,19 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+
+    
+
+    /*
+    |--------------------------------------------------------------------------
+    | OTP Demo Bypass
+    |--------------------------------------------------------------------------
+    |
+    | Permite omitir temporalmente el OTP para cuentas de residentes en
+    | entornos de demostración, sin afectar el flujo del administrador.
+    |
+    */
+
+    'otp_bypass_resident' => env('AUTH_OTP_BYPASS_RESIDENT', false),
+
 ];

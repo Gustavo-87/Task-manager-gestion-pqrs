@@ -32,6 +32,22 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
         $remember = $request->boolean('remember');
+         
+                if (
+            $user->rol === 'residente'
+            && (bool) config('auth.otp_bypass_resident')
+        ) {
+            AuditLogger::log(
+                $request,
+                'Autenticación',
+                'iniciar_sesion',
+                'Inició sesión en el sistema mediante bypass OTP para demostración.'
+            );
+
+            return redirect()->intended(
+                route('dashboard', absolute: false)
+            );
+        }
 
         $otp = $user->generateOtp();
 
