@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class DemoDataSeeder extends Seeder
 {
-    public const EMAIL_SUFFIX = '@demo-pqrs.example.com';
     public const AUDIT_PREFIX = '[DEMO]';
+    public const ADMIN_EMAIL = 'gestionpqrs7@gmail.com';
+    public const RESIDENT_EMAIL = 'residentepqrs@gmail.com';
+    public const DEFAULT_PASSWORD = 'DemoPQRS2026!';
 
     public function run(): void
     {
@@ -33,65 +35,67 @@ class DemoDataSeeder extends Seeder
                 return [$category['nombre'] => $model];
             });
 
-            $admins = collect([
-                ['name' => 'Laura Martínez', 'email' => 'laura.admin'.self::EMAIL_SUFFIX],
-                ['name' => 'Carlos Ramírez', 'email' => 'carlos.admin'.self::EMAIL_SUFFIX],
-            ])->map(fn (array $data) => User::create($data + [
-                'rol' => 'admin', 'activo' => true, 'password' => 'DemoPQRS2026!', 'email_verified_at' => now(),
-            ]));
+            $admin = User::create([
+                'name' => 'Administrador del Conjunto',
+                'email' => self::ADMIN_EMAIL,
+                'rol' => 'admin',
+                'activo' => true,
+                'password' => self::DEFAULT_PASSWORD,
+                'email_verified_at' => now(),
+            ]);
 
-            $residentNames = [
-                'Ana Torres', 'Miguel Rodríguez', 'Sofía Hernández', 'Daniel Gómez',
-                'Valentina Castro', 'Andrés López', 'Camila Vargas', 'Juan Pérez',
-                'Mariana Rojas', 'Felipe Sánchez', 'Natalia Moreno', 'Sebastián Ortiz',
-            ];
+            $resident = User::create([
+                'name' => 'Residente de Prueba',
+                'email' => self::RESIDENT_EMAIL,
+                'rol' => 'residente',
+                'activo' => true,
+                'password' => self::DEFAULT_PASSWORD,
+                'email_verified_at' => now(),
+            ]);
 
-            $residents = collect($residentNames)->map(function (string $name, int $index) {
-                return User::create([
-                    'name' => $name,
-                    'email' => 'residente'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT).self::EMAIL_SUFFIX,
-                    'rol' => 'residente',
-                    'activo' => $index !== 11,
-                    'password' => 'DemoPQRS2026!',
-                    'email_verified_at' => now(),
-                ]);
-            });
-
-            $cases = $this->cases();
-            $states = ['radicada', 'en_revision', 'respondida', 'cerrada'];
-            $today = Carbon::today();
-
-            foreach ($cases as $index => [$category, $subject, $description]) {
-                $resident = $residents[$index % $residents->count()];
-                $daysAgo = match (true) {
-                    $index < 4 => $index,
-                    $index < 8 => 13 + ($index % 3),
-                    default => 18 + (($index * 7) % 72),
-                };
-                $filedAt = $today->copy()->subDays($daysAgo);
-                $state = $states[$index % count($states)];
+            foreach ($this->cases() as $case) {
+                $filedAt = Carbon::parse($case['filed_at']);
+                $response = $case['response'];
+                $responseDate = $response
+                    ? Carbon::parse($case['responded_at'])
+                    : null;
 
                 $pqr = Pqr::create([
-                    'asunto' => $subject,
-                    'descripcion' => $description,
+                    'asunto' => $case['subject'],
+                    'descripcion' => $case['description'],
                     'fecha_radicacion' => $filedAt,
                     'fecha_limite_respuesta' => $filedAt->copy()->addDays(15),
-                    'estado' => $state,
+                    'estado' => $case['state'],
+                    'respuesta' => $response,
                     'user_id' => $resident->id,
-                    'tipo_pqr_id' => $categories[$category]->id,
-                    'created_at' => $filedAt->copy()->setTime(9 + ($index % 8), 15),
-                    'updated_at' => $filedAt->copy()->addDays(min(5, $daysAgo))->setTime(14, 30),
+                    'respondida_por' => $response ? $admin->id : null,
+                    'respondida_en' => $responseDate,
+                    'tipo_pqr_id' => $categories[$case['category']]->id,
+                    'created_at' => $filedAt->copy()->setTime(9, 15),
+                    'updated_at' => ($responseDate ?? $filedAt)->copy(),
                 ]);
 
-                if ($state !== 'radicada') {
+                if ($case['state'] !== 'radicada') {
                     PqrHistory::create([
                         'pqr_id' => $pqr->id,
                         'campo' => 'estado',
                         'valor_anterior' => 'radicada',
-                        'valor_nuevo' => $state,
-                        'user_id' => $admins[$index % $admins->count()]->id,
+                        'valor_nuevo' => $case['state'],
+                        'user_id' => $admin->id,
                         'created_at' => $pqr->updated_at,
                         'updated_at' => $pqr->updated_at,
+                    ]);
+                }
+
+                if ($response) {
+                    PqrHistory::create([
+                        'pqr_id' => $pqr->id,
+                        'campo' => 'respuesta',
+                        'valor_anterior' => null,
+                        'valor_nuevo' => $response,
+                        'user_id' => $admin->id,
+                        'created_at' => $responseDate,
+                        'updated_at' => $responseDate,
                     ]);
                 }
 
@@ -101,28 +105,45 @@ class DemoDataSeeder extends Seeder
                     'action' => 'crear',
                     'auditable_type' => Pqr::class,
                     'auditable_id' => $pqr->id,
-                    'description' => self::AUDIT_PREFIX." Creó la PQR #{$pqr->id}: {$subject}",
-                    'new_values' => ['estado' => 'radicada', 'categoria' => $category],
-                    'ip_address' => '192.0.2.'.(($index % 200) + 1),
+                    'description' => self::AUDIT_PREFIX." Creó la PQR #{$pqr->id}: {$case['subject']}",
+                    'new_values' => ['estado' => 'radicada', 'categoria' => $case['category']],
+                    'ip_address' => '192.0.2.10',
                     'user_agent' => 'Navegador de demostración académica',
                     'created_at' => $pqr->created_at,
                     'updated_at' => $pqr->created_at,
                 ]);
 
-                if ($state !== 'radicada') {
+                if ($case['state'] !== 'radicada') {
                     Audit::create([
-                        'user_id' => $admins[$index % $admins->count()]->id,
+                        'user_id' => $admin->id,
                         'module' => 'PQR',
                         'action' => 'cambiar_estado',
                         'auditable_type' => Pqr::class,
                         'auditable_id' => $pqr->id,
                         'description' => self::AUDIT_PREFIX." Cambió el estado de la PQR #{$pqr->id}",
                         'old_values' => ['estado' => 'radicada'],
-                        'new_values' => ['estado' => $state],
+                        'new_values' => ['estado' => $case['state']],
                         'ip_address' => '192.0.2.250',
                         'user_agent' => 'Navegador de demostración académica',
                         'created_at' => $pqr->updated_at,
                         'updated_at' => $pqr->updated_at,
+                    ]);
+                }
+
+                if ($response) {
+                    Audit::create([
+                        'user_id' => $admin->id,
+                        'module' => 'PQR',
+                        'action' => 'resolver',
+                        'auditable_type' => Pqr::class,
+                        'auditable_id' => $pqr->id,
+                        'description' => self::AUDIT_PREFIX." Resolvió la PQR #{$pqr->id}",
+                        'old_values' => ['estado' => $case['state'] === 'cerrada' ? 'resuelta' : 'en_proceso'],
+                        'new_values' => ['estado' => $case['state'], 'respuesta' => $response],
+                        'ip_address' => '192.0.2.251',
+                        'user_agent' => 'Navegador de demostración académica',
+                        'created_at' => $responseDate,
+                        'updated_at' => $responseDate,
                     ]);
                 }
             }
@@ -133,7 +154,7 @@ class DemoDataSeeder extends Seeder
     {
         DB::transaction(function () {
             Audit::where('description', 'like', self::AUDIT_PREFIX.'%')->delete();
-            User::where('email', 'like', '%'.self::EMAIL_SUFFIX)->delete();
+            User::whereIn('email', [self::ADMIN_EMAIL, self::RESIDENT_EMAIL])->delete();
         });
     }
 
@@ -145,46 +166,69 @@ class DemoDataSeeder extends Seeder
     private function cases(): array
     {
         return [
-            ['Petición', 'Certificado de paz y salvo', 'Solicito el certificado de paz y salvo del apartamento para realizar un trámite bancario.'],
-            ['Queja', 'Ruido excesivo en horas de la noche', 'Durante varios fines de semana se ha presentado ruido elevado después de las 11:00 p. m.'],
-            ['Reclamo', 'Cobro incorrecto en la cuota de administración', 'La factura presenta un recargo que ya fue pagado el mes anterior.'],
-            ['Sugerencia', 'Instalación de bicicleteros', 'Propongo instalar bicicleteros cubiertos cerca de la portería principal.'],
-            ['Solicitud', 'Autorización para mudanza', 'Solicito autorización para realizar la mudanza el próximo sábado en la mañana.'],
-            ['Petición', 'Copia del reglamento de propiedad horizontal', 'Agradezco enviar una copia digital del reglamento vigente del conjunto.'],
-            ['Queja', 'Mascota sin correa en zona común', 'Se han presentado recorridos frecuentes de una mascota sin correa en el parque infantil.'],
-            ['Reclamo', 'Daño en vehículo dentro del parqueadero', 'Reporto un rayón encontrado en el vehículo estacionado durante la noche.'],
-            ['Sugerencia', 'Mejorar iluminación del sendero', 'El sendero posterior tiene poca iluminación y representa riesgo para los residentes.'],
-            ['Solicitud', 'Reserva del salón comunal', 'Deseo reservar el salón comunal para una reunión familiar.'],
-            ['Petición', 'Revisión de cámaras de seguridad', 'Solicito revisar las cámaras por la pérdida de un paquete en recepción.'],
-            ['Queja', 'Uso inadecuado de parqueadero de visitantes', 'Un vehículo permanece varios días ocupando un espacio destinado a visitantes.'],
-            ['Reclamo', 'Filtración de agua en apartamento', 'Existe una filtración proveniente de una tubería de zona común.'],
-            ['Sugerencia', 'Jornada de reciclaje mensual', 'Propongo organizar una jornada mensual para residuos electrónicos y reciclables.'],
-            ['Solicitud', 'Ingreso de técnico de internet', 'Solicito autorizar el ingreso del técnico para instalación del servicio.'],
-            ['Petición', 'Estado de cuenta detallado', 'Requiero un estado de cuenta con el detalle de pagos y conceptos del año.'],
-            ['Queja', 'Basuras fuera del horario establecido', 'Algunos residentes dejan residuos después del horario de recolección.'],
-            ['Reclamo', 'Intermitencia del citófono', 'El citófono del apartamento falla y no permite recibir llamadas de portería.'],
-            ['Sugerencia', 'Clases grupales en zona social', 'Sugiero organizar actividades deportivas para niños y adultos los fines de semana.'],
-            ['Solicitud', 'Actualización de datos de contacto', 'Solicito actualizar el teléfono y correo registrados para mi apartamento.'],
-            ['Petición', 'Información sobre asamblea anual', 'Deseo conocer la fecha y agenda previstas para la próxima asamblea.'],
-            ['Queja', 'Obstrucción de pasillo común', 'Hay objetos almacenados de forma permanente en el pasillo del tercer piso.'],
-            ['Reclamo', 'Falla recurrente del ascensor', 'El ascensor de la torre dos presenta paradas inesperadas y ruidos fuertes.'],
-            ['Sugerencia', 'Zona de lectura en el salón social', 'Propongo adecuar un pequeño espacio de lectura para residentes.'],
-            ['Solicitud', 'Duplicado de tarjeta de acceso', 'Solicito expedir una tarjeta adicional de acceso para un integrante del hogar.'],
-            ['Petición', 'Acta de la última asamblea', 'Solicito copia digital del acta aprobada en la última asamblea general.'],
-            ['Queja', 'Humo de cigarrillo en áreas comunes', 'Se presenta consumo frecuente de cigarrillo cerca de las ventanas de la torre.'],
-            ['Reclamo', 'Demora en reparación de puerta', 'La puerta peatonal continúa dañada pese al reporte realizado anteriormente.'],
-            ['Sugerencia', 'Señalización de rutas de evacuación', 'Sugiero reforzar la señalización visible de las rutas de evacuación.'],
-            ['Solicitud', 'Permiso para ingreso de mobiliario', 'Solicito permitir el ingreso de muebles durante el horario autorizado.'],
-            ['Petición', 'Consulta de sanción registrada', 'Solicito información y soportes sobre una sanción reflejada en mi cuenta.'],
-            ['Queja', 'Pelotas en zona de parqueaderos', 'Niños juegan con balones cerca de los vehículos durante la tarde.'],
-            ['Reclamo', 'Humedad en depósito privado', 'Se evidencia humedad causada posiblemente por una canaleta de zona común.'],
-            ['Sugerencia', 'Canal informativo para residentes', 'Propongo consolidar avisos importantes en un canal digital oficial.'],
-            ['Solicitud', 'Registro de nuevo vehículo', 'Solicito registrar un vehículo nuevo asociado al parqueadero del apartamento.'],
-            ['Petición', 'Cronograma de mantenimiento', 'Agradezco compartir el cronograma de mantenimiento de ascensores y bombas.'],
-            ['Queja', 'Puerta de acceso queda abierta', 'La puerta de la torre no cierra correctamente durante algunas horas.'],
-            ['Reclamo', 'Cobro por parqueadero no asignado', 'La factura incluye un parqueadero adicional que no pertenece al apartamento.'],
-            ['Sugerencia', 'Instalar dispensadores para mascotas', 'Sugiero instalar dispensadores de bolsas en las zonas verdes.'],
-            ['Solicitud', 'Autorización de visitante frecuente', 'Solicito registrar temporalmente a un familiar que apoyará el cuidado de un residente.'],
+            [
+                'category' => 'Solicitud',
+                'subject' => 'Certificado de paz y salvo',
+                'description' => 'Solicito el certificado de paz y salvo del apartamento para presentarlo en un trámite bancario.',
+                'state' => 'radicada',
+                'filed_at' => '2026-07-20',
+                'response' => null,
+                'responded_at' => null,
+            ],
+            [
+                'category' => 'Queja',
+                'subject' => 'Ruido excesivo en zona social',
+                'description' => 'Durante el fin de semana se presentó ruido después de las 11:00 p. m. en la zona social del conjunto.',
+                'state' => 'en_revision',
+                'filed_at' => '2026-07-18',
+                'response' => null,
+                'responded_at' => null,
+            ],
+            [
+                'category' => 'Reclamo',
+                'subject' => 'Revisión de cobro de administración',
+                'description' => 'La factura del mes incluye un recargo que ya había sido cancelado en el pago anterior.',
+                'state' => 'en_proceso',
+                'filed_at' => '2026-07-15',
+                'response' => null,
+                'responded_at' => null,
+            ],
+            [
+                'category' => 'Solicitud',
+                'subject' => 'Permiso para mudanza',
+                'description' => 'Solicito autorización para realizar la mudanza el sábado 25 de julio en horario de la mañana.',
+                'state' => 'en_espera',
+                'filed_at' => '2026-07-15',
+                'response' => null,
+                'responded_at' => null,
+            ],
+            [
+                'category' => 'Solicitud',
+                'subject' => 'Solicitud rechazada por información incompleta',
+                'description' => 'La solicitud fue radicada sin anexar el documento soporte requerido por la administración.',
+                'state' => 'rechazada',
+                'filed_at' => '2026-07-12',
+                'response' => null,
+                'responded_at' => null,
+            ],
+            [
+                'category' => 'Reclamo',
+                'subject' => 'Falla en citófono del apartamento',
+                'description' => 'El citófono no permite recibir llamadas desde portería ni abrir la puerta peatonal desde el apartamento.',
+                'state' => 'resuelta',
+                'filed_at' => '2026-07-08',
+                'response' => 'El proveedor realizó el cambio del auricular interno y confirmó el funcionamiento correcto del citófono.',
+                'responded_at' => '2026-07-11 09:45:00',
+            ],
+            [
+                'category' => 'Sugerencia',
+                'subject' => 'Mejora de iluminación en parqueadero',
+                'description' => 'Sugiero instalar un punto adicional de iluminación en el parqueadero de visitantes para mejorar la visibilidad nocturna.',
+                'state' => 'cerrada',
+                'filed_at' => '2026-07-02',
+                'response' => 'La sugerencia fue aprobada y el nuevo punto de iluminación quedó instalado durante la jornada de mantenimiento del 10 de julio.',
+                'responded_at' => '2026-07-10 17:15:00',
+            ],
         ];
     }
 }

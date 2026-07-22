@@ -22,7 +22,7 @@ class PqrReportMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: "Reporte de PQR: {$this->dateFrom} a {$this->dateTo}");
+        return new Envelope(subject: "Reporte de PQRS: {$this->dateFrom} a {$this->dateTo}");
     }
 
     public function content(): Content

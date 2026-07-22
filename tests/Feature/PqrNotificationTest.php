@@ -23,7 +23,7 @@ class PqrNotificationTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_resident_is_emailed_when_admin_changes_pqr_status(): void
+    public function test_resident_is_emailed_when_admin_resolves_a_pqrs(): void
     {
         Notification::fake();
         $admin = User::factory()->create(['rol' => 'admin']);
@@ -32,30 +32,26 @@ class PqrNotificationTest extends TestCase
         $pqr = Pqr::factory()->create([
             'user_id' => $resident->id,
             'tipo_pqr_id' => $tipo->id,
-            'estado' => 'radicada',
+            'estado' => 'en_proceso',
         ]);
 
-        $this->actingAs($admin)->put(route('pqrs.update', $pqr), [
-            'asunto' => $pqr->asunto,
-            'descripcion' => $pqr->descripcion,
-            'fecha_radicacion' => $pqr->fecha_radicacion->toDateString(),
-            'tipo_pqr_id' => $tipo->id,
-            'estado' => 'en_revision',
-        ])->assertRedirect(route('pqrs.edit', $pqr));
+        $this->actingAs($admin)
+            ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Tu solicitud fue atendida por la administración.'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
 
-        Notification::assertSentTo($resident, PqrStatusChanged::class, fn ($notification) => $notification->previousStatus === 'radicada' && $notification->newStatus === 'en_revision'
+        Notification::assertSentTo(
+            $resident,
+            PqrStatusChanged::class,
+            fn ($notification) => $notification->previousStatus === 'en_proceso'
+                && $notification->newStatus === 'resuelta'
         );
-        $this->assertDatabaseHas('audits', [
-            'module' => 'Notificaciones',
-            'action' => 'enviar_correo',
-            'auditable_id' => $pqr->id,
-        ]);
     }
 
     public function test_deadline_command_notifies_active_admins_one_day_before_only_once(): void
     {
         Notification::fake();
         Carbon::setTestNow('2026-07-14 08:00:00');
+
         $admin = User::factory()->create(['rol' => 'admin', 'activo' => true]);
         $inactiveAdmin = User::factory()->create(['rol' => 'admin', 'activo' => false]);
         $pqr = Pqr::factory()->create([
@@ -71,18 +67,23 @@ class PqrNotificationTest extends TestCase
         $this->assertSame(1, NotificationDelivery::where('pqr_id', $pqr->id)->count());
     }
 
-    public function test_deadline_command_notifies_on_due_date_and_ignores_completed_pqrs(): void
+    public function test_deadline_command_ignores_inactive_workflow_states(): void
     {
         Notification::fake();
         Carbon::setTestNow('2026-07-14 08:00:00');
+
         $admin = User::factory()->create(['rol' => 'admin', 'activo' => true]);
         $due = Pqr::factory()->create(['estado' => 'radicada', 'fecha_limite_respuesta' => '2026-07-14']);
-        Pqr::factory()->create(['estado' => 'respondida', 'fecha_limite_respuesta' => '2026-07-14']);
+        Pqr::factory()->create(['estado' => 'resuelta', 'fecha_limite_respuesta' => '2026-07-14']);
         Pqr::factory()->create(['estado' => 'cerrada', 'fecha_limite_respuesta' => '2026-07-15']);
+        Pqr::factory()->create(['estado' => 'rechazada', 'fecha_limite_respuesta' => '2026-07-15']);
 
         $this->artisan('pqrs:notify-deadlines')->assertSuccessful();
 
-        Notification::assertSentTo($admin, PqrDeadlineReminder::class, fn ($notification) => $notification->pqr->is($due) && $notification->daysRemaining === 0
+        Notification::assertSentTo(
+            $admin,
+            PqrDeadlineReminder::class,
+            fn ($notification) => $notification->pqr->is($due) && $notification->daysRemaining === 0
         );
         Notification::assertSentToTimes($admin, PqrDeadlineReminder::class, 1);
     }

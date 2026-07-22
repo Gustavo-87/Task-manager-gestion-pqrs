@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PqrController extends Controller
 {
@@ -41,7 +42,10 @@ class PqrController extends Controller
                     Rule::in([
                         'radicada',
                         'en_revision',
-                        'respondida',
+                        'en_proceso',
+                        'en_espera',
+                        'rechazada',
+                        'resuelta',
                         'cerrada',
                     ]),
                 ],
@@ -90,7 +94,7 @@ class PqrController extends Controller
                 $request,
                 'PQR',
                 'crear',
-                "Creó la PQR #{$pqr->id}: {$pqr->asunto}",
+                "Creó la PQRS #{$pqr->id}: {$pqr->asunto}",
                 $pqr,
                 null,
                 $pqr->getAttributes(),
@@ -100,7 +104,7 @@ class PqrController extends Controller
         });
 
         return response()->json([
-            'message' => 'PQR creada correctamente.',
+            'message' => 'PQRS creada correctamente.',
             'data' => $pqr->load([
                 'user:id,name,email',
                 'tipoPqr:id,nombre,descripcion',
@@ -123,19 +127,20 @@ class PqrController extends Controller
 
     public function update(Request $request, Pqr $pqr): JsonResponse
     {
-        Gate::authorize('update', $pqr);
+        Gate::authorize('manageWorkflow', $pqr);
 
         $validated = $request->validate([
             'estado' => [
                 'required',
-                Rule::in([
-                    'radicada',
-                    'en_revision',
-                    'respondida',
-                    'cerrada',
-                ]),
+                Rule::in(array_keys(Pqr::statuses())),
             ],
         ]);
+
+        if (! Pqr::canTransitionTo($pqr->estado, $validated['estado'])) {
+            throw ValidationException::withMessages([
+                'estado' => 'No es posible devolver el estado de una PQRS.',
+            ]);
+        }
 
         DB::transaction(function () use ($request, $pqr, $validated): void {
             $estadoAnterior = $pqr->estado;
@@ -158,7 +163,7 @@ class PqrController extends Controller
                 $request,
                 'PQR',
                 'cambiar_estado',
-                "Cambió el estado de la PQR #{$pqr->id}",
+                "Cambió el estado de la PQRS #{$pqr->id}",
                 $pqr,
                 ['estado' => $estadoAnterior],
                 ['estado' => $pqr->estado],
@@ -166,7 +171,7 @@ class PqrController extends Controller
         });
 
         return response()->json([
-            'message' => 'Estado de la PQR actualizado correctamente.',
+            'message' => 'Estado de la PQRS actualizado correctamente.',
             'data' => $pqr->fresh()->load([
                 'user:id,name,email',
                 'tipoPqr:id,nombre,descripcion',
@@ -186,7 +191,7 @@ class PqrController extends Controller
                 $request,
                 'PQR',
                 'eliminar',
-                "Eliminó la PQR #{$pqr->id}: {$pqr->asunto}",
+                "Eliminó la PQRS #{$pqr->id}: {$pqr->asunto}",
                 $pqr,
                 $snapshot,
             );
@@ -195,5 +200,57 @@ class PqrController extends Controller
         });
 
         return response()->json(null, 204);
+    }
+
+    public function workflow(Request $request, Pqr $pqr): JsonResponse
+    {
+        Gate::authorize('manageWorkflow', $pqr);
+
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(array_keys(Pqr::workflowTransitions()))],
+        ]);
+
+        $transition = Pqr::transitionForAction($validated['action']);
+
+        if ($transition === null || ! Pqr::canApplyWorkflowAction($pqr->estado, $validated['action'])) {
+            throw ValidationException::withMessages([
+                'action' => 'La acción solicitada no está disponible para el estado actual de la PQRS.',
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $pqr, $transition, $validated): void {
+            $estadoAnterior = $pqr->estado;
+
+            $pqr->update([
+                'estado' => $transition['to'],
+            ]);
+
+            PqrHistory::create([
+                'pqr_id' => $pqr->id,
+                'campo' => 'estado',
+                'valor_anterior' => $estadoAnterior,
+                'valor_nuevo' => $pqr->estado,
+                'user_id' => $request->user()->id,
+            ]);
+
+            AuditLogger::log(
+                $request,
+                'PQR',
+                $validated['action'],
+                "Cambió el estado de la PQRS #{$pqr->id}",
+                $pqr,
+                ['estado' => $estadoAnterior],
+                ['estado' => $pqr->estado],
+            );
+        });
+
+        return response()->json([
+            'message' => 'Estado de la PQRS actualizado correctamente.',
+            'data' => $pqr->fresh()->load([
+                'user:id,name,email',
+                'tipoPqr:id,nombre,descripcion',
+                'responder:id,name,email',
+            ]),
+        ]);
     }
 }

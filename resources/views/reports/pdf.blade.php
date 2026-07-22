@@ -29,7 +29,7 @@
     <div class="header">
         <img class="logo" src="data:image/jpeg;base64,{{ base64_encode(file_get_contents(public_path('images/logo-gestion-pqrs.jpg'))) }}" alt="Logo">
         <div class="title">
-            <h1>{{ $settings->residential_name }} · Reporte de gestión de PQR</h1>
+            <h1>{{ $settings->residential_name }} · Reporte de gestión de PQRS</h1>
             @if ($settings->nit || $settings->address)<div class="muted">{{ $settings->nit ? 'NIT '.$settings->nit : '' }}{{ $settings->nit && $settings->address ? ' · ' : '' }}{{ $settings->address }}</div>@endif
             <div class="muted">Periodo: {{ $dateFrom->format('d/m/Y') }} al {{ $dateTo->format('d/m/Y') }}</div>
             <div class="muted">Generado: {{ $generatedAt->format('d/m/Y H:i') }}</div>
@@ -40,7 +40,10 @@
         <td class="card"><strong>{{ $pqrs->count() }}</strong>Total</td>
         <td class="card"><strong>{{ $byStatus['radicada'] }}</strong>Radicadas</td>
         <td class="card"><strong>{{ $byStatus['en_revision'] }}</strong>En revisión</td>
-        <td class="card"><strong>{{ $byStatus['respondida'] }}</strong>Respondidas</td>
+        <td class="card"><strong>{{ $byStatus['en_proceso'] }}</strong>En proceso</td>
+        <td class="card"><strong>{{ $byStatus['en_espera'] }}</strong>En espera</td>
+        <td class="card"><strong>{{ $byStatus['rechazada'] }}</strong>Rechazadas</td>
+        <td class="card"><strong>{{ $byStatus['resuelta'] }}</strong>Resueltas</td>
         <td class="card"><strong>{{ $byStatus['cerrada'] }}</strong>Cerradas</td>
         <td class="card"><strong>{{ $overdue->count() }}</strong>Vencidas</td>
     </tr></table>
@@ -58,28 +61,28 @@
         </tbody></table>
     </td></tr></table>
 
-    <h2>Detalle de PQR</h2>
+    <h2>Detalle de PQRS</h2>
     <table class="data">
         <thead><tr><th>#</th><th>Radicación</th><th>Límite</th><th>Asunto</th><th>Categoría</th><th>Residente</th><th>Estado</th></tr></thead>
         <tbody>
         @forelse ($pqrs as $pqr)
-            <tr><td>{{ $pqr->id }}</td><td>{{ $pqr->fecha_radicacion->format('d/m/Y') }}</td><td>{{ $pqr->fecha_limite_respuesta->format('d/m/Y') }}</td><td>{{ $pqr->asunto }}</td><td>{{ $pqr->tipoPqr?->nombre ?? 'Sin categoría' }}</td><td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td><td><span class="badge">{{ match($pqr->estado) { 'radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada', default => $pqr->estado } }}</span></td></tr>
+            <tr><td>{{ $pqr->id }}</td><td>{{ $pqr->fecha_radicacion->format('d/m/Y') }}</td><td>{{ $pqr->fecha_limite_respuesta->format('d/m/Y') }}</td><td>{{ $pqr->asunto }}</td><td>{{ $pqr->tipoPqr?->nombre ?? 'Sin categoría' }}</td><td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td><td><span class="badge">{{ \App\Models\Pqr::statusLabel($pqr->estado) }}</span></td></tr>
         @empty
-            <tr><td colspan="7" class="empty">No hay PQR radicadas en el periodo seleccionado.</td></tr>
+            <tr><td colspan="7" class="empty">No hay PQRS radicadas en el periodo seleccionado.</td></tr>
         @endforelse
         </tbody>
     </table>
 
-    <h2>PQR vencidas</h2>
+    <h2>PQRS vencidas</h2>
     <table class="data"><thead><tr><th>#</th><th>Asunto</th><th>Fecha límite</th><th>Residente</th></tr></thead><tbody>
-    @forelse ($overdue as $pqr)<tr><td>{{ $pqr->id }}</td><td>{{ $pqr->asunto }}</td><td>{{ $pqr->fecha_limite_respuesta->format('d/m/Y') }}</td><td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td></tr>@empty<tr><td colspan="4" class="empty">No hay PQR vencidas en el periodo.</td></tr>@endforelse
+    @forelse ($overdue as $pqr)<tr><td>{{ $pqr->id }}</td><td>{{ $pqr->asunto }}</td><td>{{ $pqr->fecha_limite_respuesta->format('d/m/Y') }}</td><td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td></tr>@empty<tr><td colspan="4" class="empty">No hay PQRS vencidas en el periodo.</td></tr>@endforelse
     </tbody></table>
 
-    <h2>PQR próximas a vencer</h2>
+    <h2>PQRS próximas a vencer</h2>
     <table class="data"><thead><tr><th>#</th><th>Asunto</th><th>Fecha límite</th><th>Residente</th></tr></thead><tbody>
-    @forelse ($upcoming as $pqr)<tr><td>{{ $pqr->id }}</td><td>{{ $pqr->asunto }}</td><td>{{ $pqr->fecha_limite_respuesta->format('d/m/Y') }}</td><td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td></tr>@empty<tr><td colspan="4" class="empty">No hay PQR que venzan mañana.</td></tr>@endforelse
+    @forelse ($upcoming as $pqr)<tr><td>{{ $pqr->id }}</td><td>{{ $pqr->asunto }}</td><td>{{ $pqr->fecha_limite_respuesta->format('d/m/Y') }}</td><td>{{ $pqr->user?->name ?? 'Sin usuario' }}</td></tr>@empty<tr><td colspan="4" class="empty">No hay PQRS que venzan mañana.</td></tr>@endforelse
     </tbody></table>
 
-    <div class="footer">Documento generado por el sistema académico de Gestión de PQR.</div>
+    <div class="footer">Documento generado por el sistema académico de Gestión de PQRS.</div>
 </body>
 </html>

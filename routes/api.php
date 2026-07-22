@@ -19,5 +19,8 @@ Route::middleware(['auth:api', 'active'])
         Route::post('/logout', [AuthController::class, 'logout'])
             ->name('logout');
 
+        Route::patch('/pqrs/{pqr}/workflow', [PqrController::class, 'workflow'])
+            ->name('pqrs.workflow');
+
         Route::apiResource('pqrs', PqrController::class);
     });

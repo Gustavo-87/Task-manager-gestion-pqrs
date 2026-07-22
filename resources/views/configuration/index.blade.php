@@ -42,11 +42,11 @@
 
             <div class="overflow-hidden rounded-lg bg-white shadow">
                 <div class="flex items-center justify-between border-b border-gray-200 p-6">
-                    <div><h3 class="text-lg font-semibold text-gray-900">Categorías de PQR</h3><p class="mt-1 text-sm text-gray-500">Administra las opciones disponibles para clasificar solicitudes.</p></div>
+                    <div><h3 class="text-lg font-semibold text-gray-900">Categorías de PQRS</h3><p class="mt-1 text-sm text-gray-500">Administra las opciones disponibles para clasificar solicitudes.</p></div>
                     <a href="{{ route('categories.create') }}" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Nueva categoría</a>
                 </div>
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500"><tr><th class="px-6 py-3">Categoría</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Estado</th><th class="px-6 py-3">PQR</th><th class="px-6 py-3">Acciones</th></tr></thead>
+                    <thead class="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500"><tr><th class="px-6 py-3">Categoría</th><th class="px-6 py-3">Descripción</th><th class="px-6 py-3">Estado</th><th class="px-6 py-3">PQRS</th><th class="px-6 py-3">Acciones</th></tr></thead>
                     <tbody class="divide-y divide-gray-100">
                     @forelse ($categories as $category)
                         <tr><td class="px-6 py-4 font-medium text-gray-900">{{ $category->nombre }}</td><td class="max-w-md px-6 py-4 text-gray-600">{{ $category->descripcion ?: 'Sin descripción' }}</td><td class="px-6 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $category->activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700' }}">{{ $category->activo ? 'Activa' : 'Inactiva' }}</span></td><td class="px-6 py-4 text-gray-600">{{ $category->pqrs_count }}</td><td class="px-6 py-4"><div class="flex gap-3"><a href="{{ route('categories.edit', $category) }}" class="font-medium text-indigo-600 hover:text-indigo-800">Editar</a>@if ($category->pqrs_count === 0)<form method="POST" action="{{ route('categories.destroy', $category) }}" onsubmit="return confirm('¿Eliminar esta categoría?')">@csrf @method('DELETE')<button class="font-medium text-red-600 hover:text-red-800">Eliminar</button></form>@endif</div></td></tr>

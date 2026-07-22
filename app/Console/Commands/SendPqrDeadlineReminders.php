@@ -9,7 +9,7 @@ class SendPqrDeadlineReminders extends Command
 {
     protected $signature = 'pqrs:notify-deadlines';
 
-    protected $description = 'Envía alertas de PQR que vencen mañana o el día de hoy';
+    protected $description = 'Envía alertas de PQRS que vencen mañana o el día de hoy';
 
     public function handle(PqrNotificationService $notifications): int
     {

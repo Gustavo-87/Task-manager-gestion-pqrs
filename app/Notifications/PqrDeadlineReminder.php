@@ -24,7 +24,7 @@ class PqrDeadlineReminder extends Notification
         $timing = $this->daysRemaining === 0 ? 'vence hoy' : 'vence mañana';
 
         return (new MailMessage)
-            ->subject("Alerta de vencimiento: PQR #{$this->pqr->id} {$timing}")
+            ->subject("Alerta de vencimiento: PQRS #{$this->pqr->id} {$timing}")
             ->view('emails.pqr-deadline-reminder', [
                 'recipient' => $notifiable,
                 'pqr' => $this->pqr,

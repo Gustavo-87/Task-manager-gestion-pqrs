@@ -88,9 +88,9 @@ class RenderDemoSeeder extends Seeder
                 'asunto' => 'Revisión de cobro en administración',
                 'descripcion' => 'El estado de cuenta presenta un cobro que requiere revisión.',
                 'tipo' => 'Reclamo',
-                'estado' => 'respondida',
+                'estado' => 'en_proceso',
                 'dias' => 8,
-                'respuesta' => 'El cobro fue revisado y se realizó el ajuste correspondiente.',
+                'respuesta' => null,
             ],
             [
                 'asunto' => 'Mejora de iluminación en parqueadero',

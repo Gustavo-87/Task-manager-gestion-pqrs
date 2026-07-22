@@ -16,7 +16,7 @@ class PqrNotificationService
     {
         try {
             $pqr->user->notify(new PqrStatusChanged($pqr, $previousStatus, $newStatus));
-            AuditLogger::log($request, 'Notificaciones', 'enviar_correo', "Notificó a {$pqr->user->email} el cambio de estado de la PQR #{$pqr->id}", $pqr, null, [
+            AuditLogger::log($request, 'Notificaciones', 'enviar_correo', "Notificó a {$pqr->user->email} el cambio de estado de la PQRS #{$pqr->id}", $pqr, null, [
                 'recipient' => $pqr->user->email,
                 'type' => 'cambio_estado',
             ]);
@@ -24,7 +24,7 @@ class PqrNotificationService
             return true;
         } catch (Throwable $exception) {
             report($exception);
-            AuditLogger::log($request, 'Notificaciones', 'fallo_correo', "No fue posible notificar el cambio de estado de la PQR #{$pqr->id}", $pqr, null, [
+            AuditLogger::log($request, 'Notificaciones', 'fallo_correo', "No fue posible notificar el cambio de estado de la PQRS #{$pqr->id}", $pqr, null, [
                 'recipient' => $pqr->user?->email,
                 'type' => 'cambio_estado',
             ]);
@@ -40,7 +40,7 @@ class PqrNotificationService
         $admins = User::where('rol', 'admin')->where('activo', true)->get();
 
         Pqr::with('user')
-            ->whereNotIn('estado', ['respondida', 'cerrada'])
+            ->whereNotIn('estado', Pqr::inactiveStatuses())
             ->whereDate('fecha_limite_respuesta', '>=', $today)
             ->whereDate('fecha_limite_respuesta', '<=', $today->copy()->addDay())
             ->each(function (Pqr $pqr) use ($admins, $today, &$results) {
@@ -67,14 +67,14 @@ class PqrNotificationService
                             'recipient' => $admin->email,
                             'notification_date' => $today,
                         ]);
-                        AuditLogger::logSystem('Notificaciones', 'enviar_correo', "Envió a {$admin->email} la alerta de vencimiento de la PQR #{$pqr->id}", $pqr, [
+                        AuditLogger::logSystem('Notificaciones', 'enviar_correo', "Envió a {$admin->email} la alerta de vencimiento de la PQRS #{$pqr->id}", $pqr, [
                             'recipient' => $admin->email,
                             'type' => $type,
                         ]);
                         $results['sent']++;
                     } catch (Throwable $exception) {
                         report($exception);
-                        AuditLogger::logSystem('Notificaciones', 'fallo_correo', "No fue posible enviar a {$admin->email} la alerta de la PQR #{$pqr->id}", $pqr, [
+                        AuditLogger::logSystem('Notificaciones', 'fallo_correo', "No fue posible enviar a {$admin->email} la alerta de la PQRS #{$pqr->id}", $pqr, [
                             'recipient' => $admin->email,
                             'type' => $type,
                         ]);

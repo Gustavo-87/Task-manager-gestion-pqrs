@@ -1,4 +1,5 @@
 @php($editing = $editing ?? false)
+@php($currentStatus = $pqr->estado ?? 'radicada')
 
 @if ($errors->any())
     <div class="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
@@ -9,7 +10,7 @@
 
 <div class="grid gap-6 lg:grid-cols-3" x-data="{
     radicacion: @js(old('fecha_radicacion', isset($pqr) ? $pqr->fecha_radicacion->toDateString() : now()->toDateString())),
-    estado: @js(old('estado', $pqr->estado ?? 'radicada')),
+    estado: @js($currentStatus),
     get limite() {
         if (!this.radicacion) return '';
         const fecha = new Date(this.radicacion + 'T00:00:00');
@@ -17,7 +18,7 @@
         return fecha.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
     },
     estadoClase() {
-        return { radicada: 'bg-green-100 text-green-800', en_revision: 'bg-yellow-100 text-yellow-800', respondida: 'bg-orange-100 text-orange-800', cerrada: 'bg-blue-100 text-blue-800' }[this.estado] || 'bg-slate-100 text-slate-700';
+        return { radicada: 'bg-green-100 text-green-800', en_revision: 'bg-yellow-100 text-yellow-800', en_proceso: 'bg-violet-100 text-violet-800', en_espera: 'bg-amber-100 text-amber-800', rechazada: 'bg-rose-100 text-rose-800', resuelta: 'bg-orange-100 text-orange-800', cerrada: 'bg-blue-100 text-blue-800' }[this.estado] || 'bg-slate-100 text-slate-700';
     }
 }">
     <section class="space-y-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-2">
@@ -48,14 +49,10 @@
     </section>
 
     <aside class="space-y-5">
-        @if ($editing && auth()->user()->rol === 'admin')
+        @if ($editing && isset($pqr))
             <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="flex items-center justify-between gap-3"><h2 class="font-semibold text-slate-900">Estado</h2><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoClase()" x-text="{radicada:'Radicada',en_revision:'En revisión',respondida:'Respondida',cerrada:'Cerrada'}[estado]"></span></div>
-                <select id="estado" name="estado" required x-model="estado" class="mt-4 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    @foreach (['radicada' => 'Radicada', 'en_revision' => 'En revisión', 'respondida' => 'Respondida', 'cerrada' => 'Cerrada'] as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
-                </select>
-                <p class="mt-2 text-xs text-slate-500">El residente recibirá un correo cuando cambies el estado.</p>
-                <x-input-error :messages="$errors->get('estado')" class="mt-2" />
+                <div class="flex items-center justify-between gap-3"><h2 class="font-semibold text-slate-900">Estado</h2><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoClase()" x-text="{radicada:'Radicada',en_revision:'En revisión',en_proceso:'En proceso',en_espera:'En espera',rechazada:'Rechazada',resuelta:'Resuelta',cerrada:'Cerrada'}[estado]"></span></div>
+                <p class="mt-4 text-sm text-slate-600">La PQRS radicada por el usuario es de solo lectura. La administración puede gestionar su estado según el flujo y registrar una respuesta oficial.</p>
             </section>
         @endif
 
@@ -75,7 +72,7 @@
 
         <section class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
             <p class="font-semibold">Información importante</p>
-            <p class="mt-1 text-xs leading-5">Los campos marcados con * son obligatorios. Podrás consultar el avance desde el módulo de PQR.</p>
+            <p class="mt-1 text-xs leading-5">Los campos marcados con * son obligatorios. Podrás consultar el avance desde el módulo de PQRS.</p>
         </section>
     </aside>
 </div>

@@ -27,7 +27,7 @@ class ReportController extends Controller
         }
 
         $preview = $reports->data($dateFrom, $dateTo);
-        $attended = $preview['byStatus']['respondida'] + $preview['byStatus']['cerrada'];
+        $attended = $preview['byStatus']['resuelta'] + $preview['byStatus']['cerrada'];
         $attendedPercentage = $preview['pqrs']->isEmpty()
             ? 0
             : (int) round(($attended / $preview['pqrs']->count()) * 100);
@@ -50,8 +50,8 @@ class ReportController extends Controller
         $pdf = $reports->pdf($dates['date_from'], $dates['date_to']);
         $metadata = ['date_from' => $dates['date_from'], 'date_to' => $dates['date_to']];
 
-        AuditLogger::log($request, 'Reportes', 'generar', 'Generó un reporte PDF de PQR.', null, null, $metadata);
-        AuditLogger::log($request, 'Reportes', 'descargar', 'Descargó un reporte PDF de PQR.', null, null, $metadata);
+        AuditLogger::log($request, 'Reportes', 'generar', 'Generó un reporte PDF de PQRS.', null, null, $metadata);
+        AuditLogger::log($request, 'Reportes', 'descargar', 'Descargó un reporte PDF de PQRS.', null, null, $metadata);
 
         return $pdf->download($reports->filename($dates['date_from'], $dates['date_to']));
     }
@@ -62,7 +62,7 @@ class ReportController extends Controller
         $filename = $reports->filename($dates['date_from'], $dates['date_to']);
         $metadata = ['date_from' => $dates['date_from'], 'date_to' => $dates['date_to'], 'recipient' => $request->user()->email];
 
-        AuditLogger::log($request, 'Reportes', 'generar', 'Generó un reporte PDF de PQR para envío.', null, null, $metadata);
+        AuditLogger::log($request, 'Reportes', 'generar', 'Generó un reporte PDF de PQRS para envío.', null, null, $metadata);
 
         try {
             Mail::to($request->user())->send(new PqrReportMail(

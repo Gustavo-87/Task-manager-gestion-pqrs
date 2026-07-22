@@ -26,7 +26,7 @@ class PqrStatusChanged extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("Actualización de la PQR #{$this->pqr->id}")
+            ->subject("Actualización de la PQRS #{$this->pqr->id}")
             ->view('emails.pqr-status-changed', [
                 'recipient' => $notifiable,
                 'pqr' => $this->pqr,
@@ -38,12 +38,6 @@ class PqrStatusChanged extends Notification
 
     private function statusLabel(string $status): string
     {
-        return match ($status) {
-            'radicada' => 'Radicada',
-            'en_revision' => 'En revisión',
-            'respondida' => 'Respondida',
-            'cerrada' => 'Cerrada',
-            default => ucfirst(str_replace('_', ' ', $status)),
-        };
+        return Pqr::statusLabel($status);
     }
 }

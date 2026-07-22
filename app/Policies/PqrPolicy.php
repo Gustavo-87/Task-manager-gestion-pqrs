@@ -24,7 +24,7 @@ class PqrPolicy
 
     public function update(User $user, Pqr $pqr): bool
     {
-        return $user->rol === 'admin';
+        return false;
     }
 
     public function delete(User $user, Pqr $pqr): bool
@@ -32,9 +32,21 @@ class PqrPolicy
         return $user->rol === 'admin';
     }
 
+    public function manageWorkflow(User $user, Pqr $pqr): bool
+    {
+        return $user->rol === 'admin';
+    }
+
     public function respond(User $user, Pqr $pqr): bool
     {
-        return $user->rol === 'admin' && blank($pqr->respuesta);
+        return $user->rol === 'admin'
+            && (
+                in_array($pqr->estado, Pqr::responseEligibleStatuses(), true)
+                || (
+                    in_array($pqr->estado, Pqr::responseCompletionStatuses(), true)
+                    && blank($pqr->respuesta)
+                )
+            );
     }
 
     public function updateResponse(User $user, Pqr $pqr): bool

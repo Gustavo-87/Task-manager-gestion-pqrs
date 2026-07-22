@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PqrController extends Controller
 {
@@ -43,7 +44,10 @@ class PqrController extends Controller
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN estado = 'radicada' THEN 1 ELSE 0 END) as radicadas")
             ->selectRaw("SUM(CASE WHEN estado = 'en_revision' THEN 1 ELSE 0 END) as en_revision")
-            ->selectRaw("SUM(CASE WHEN estado = 'respondida' THEN 1 ELSE 0 END) as respondidas")
+            ->selectRaw("SUM(CASE WHEN estado = 'en_proceso' THEN 1 ELSE 0 END) as en_proceso")
+            ->selectRaw("SUM(CASE WHEN estado = 'en_espera' THEN 1 ELSE 0 END) as en_espera")
+            ->selectRaw("SUM(CASE WHEN estado = 'rechazada' THEN 1 ELSE 0 END) as rechazadas")
+            ->selectRaw("SUM(CASE WHEN estado = 'resuelta' THEN 1 ELSE 0 END) as resueltas")
             ->selectRaw("SUM(CASE WHEN estado = 'cerrada' THEN 1 ELSE 0 END) as cerradas")
             ->first();
 
@@ -79,9 +83,9 @@ class PqrController extends Controller
         $data['user_id'] = $request->user()->id;
 
         $pqr = Pqr::create($data);
-        AuditLogger::log($request, 'PQR', 'crear', "Creó la PQR #{$pqr->id}: {$pqr->asunto}", $pqr, null, $pqr->getAttributes());
+        AuditLogger::log($request, 'PQR', 'crear', "Creó la PQRS #{$pqr->id}: {$pqr->asunto}", $pqr, null, $pqr->getAttributes());
 
-        return redirect()->route('pqrs.index')->with('success', 'PQR creada correctamente.');
+        return redirect()->route('pqrs.index')->with('success', 'PQRS creada correctamente.');
     }
 
     public function edit(Pqr $pqr)
@@ -101,8 +105,15 @@ class PqrController extends Controller
         Gate::authorize('update', $pqr);
 
         $data = $request->validate([
-            'estado' => ['required', Rule::in(['radicada', 'en_revision', 'respondida', 'cerrada'])],
+            'estado' => ['required', Rule::in(array_keys(Pqr::statuses()))],
         ]);
+
+        if (! Pqr::canTransitionTo($pqr->estado, $data['estado'])) {
+            throw ValidationException::withMessages([
+                'estado' => 'No es posible devolver el estado de una PQRS.',
+            ]);
+        }
+
         $original = ['estado' => $pqr->estado];
 
         $pqr->update($data);
@@ -110,10 +121,10 @@ class PqrController extends Controller
         $changes = collect($pqr->getChanges())->except('updated_at')->all();
         if ($changes !== []) {
             $oldValues = collect($changes)->mapWithKeys(fn ($value, $field) => [$field => $original[$field] ?? null])->all();
-            AuditLogger::log($request, 'PQR', 'actualizar', "Actualizó la PQR #{$pqr->id}: {$pqr->asunto}", $pqr, $oldValues, $changes);
+            AuditLogger::log($request, 'PQR', 'actualizar', "Actualizó la PQRS #{$pqr->id}: {$pqr->asunto}", $pqr, $oldValues, $changes);
 
             if (array_key_exists('estado', $changes)) {
-                AuditLogger::log($request, 'PQR', 'cambiar_estado', "Cambió el estado de la PQR #{$pqr->id}", $pqr, ['estado' => $oldValues['estado']], ['estado' => $changes['estado']]);
+                AuditLogger::log($request, 'PQR', 'cambiar_estado', "Cambió el estado de la PQRS #{$pqr->id}", $pqr, ['estado' => $oldValues['estado']], ['estado' => $changes['estado']]);
                 $notifications->sendStatusChanged($request, $pqr->load('user'), $oldValues['estado'], $changes['estado']);
             }
         }
@@ -135,6 +146,54 @@ class PqrController extends Controller
         return redirect()->route('pqrs.edit', $pqr)->with('success', 'Estado actualizado correctamente.');
     }
 
+    public function transitionWorkflow(Request $request, Pqr $pqr, PqrNotificationService $notifications)
+    {
+        Gate::authorize('manageWorkflow', $pqr);
+
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(array_keys(Pqr::workflowTransitions()))],
+        ]);
+
+        $transition = Pqr::transitionForAction($validated['action']);
+
+        if ($transition === null || ! Pqr::canApplyWorkflowAction($pqr->estado, $validated['action'])) {
+            throw ValidationException::withMessages([
+                'action' => 'La acción solicitada no está disponible para el estado actual de la PQRS.',
+            ]);
+        }
+
+        $previousStatus = $pqr->estado;
+        $nextStatus = $transition['to'];
+
+        DB::transaction(function () use ($request, $pqr, $previousStatus, $nextStatus, $validated): void {
+            $pqr->update(['estado' => $nextStatus]);
+
+            PqrHistory::create([
+                'pqr_id' => $pqr->id,
+                'campo' => 'estado',
+                'valor_anterior' => $previousStatus,
+                'valor_nuevo' => $nextStatus,
+                'user_id' => $request->user()->id,
+            ]);
+
+            AuditLogger::log(
+                $request,
+                'PQR',
+                $validated['action'],
+                "Cambió el estado de la PQRS #{$pqr->id}",
+                $pqr,
+                ['estado' => $previousStatus],
+                ['estado' => $nextStatus],
+            );
+        });
+
+        $notifications->sendStatusChanged($request, $pqr->load('user'), $previousStatus, $nextStatus);
+
+        return redirect()
+            ->route('pqrs.edit', $pqr)
+            ->with('success', 'Estado actualizado a '.Pqr::statusLabel($nextStatus).'.');
+    }
+
     public function respond(Request $request, Pqr $pqr, PqrNotificationService $notifications)
     {
         Gate::authorize('respond', $pqr);
@@ -143,7 +202,9 @@ class PqrController extends Controller
             'respuesta' => ['required', 'string', 'max:10000'],
         ]);
         $previousStatus = $pqr->estado;
-        $newStatus = $previousStatus === 'cerrada' ? 'cerrada' : 'respondida';
+        $newStatus = in_array($previousStatus, Pqr::responseCompletionStatuses(), true)
+            ? $previousStatus
+            : 'resuelta';
 
         DB::transaction(function () use ($request, $pqr, $validated, $previousStatus, $newStatus): void {
             $pqr->update([
@@ -153,12 +214,22 @@ class PqrController extends Controller
                 'estado' => $newStatus,
             ]);
 
-            foreach (['respuesta', 'respondida_en', 'respondida_por', 'estado'] as $field) {
+            foreach (['respuesta', 'respondida_en', 'respondida_por'] as $field) {
                 PqrHistory::create([
                     'pqr_id' => $pqr->id,
                     'campo' => $field,
-                    'valor_anterior' => $field === 'estado' ? $previousStatus : null,
+                    'valor_anterior' => null,
                     'valor_nuevo' => $pqr->{$field},
+                    'user_id' => $request->user()->id,
+                ]);
+            }
+
+            if ($previousStatus !== $newStatus) {
+                PqrHistory::create([
+                    'pqr_id' => $pqr->id,
+                    'campo' => 'estado',
+                    'valor_anterior' => $previousStatus,
+                    'valor_nuevo' => $newStatus,
                     'user_id' => $request->user()->id,
                 ]);
             }
@@ -166,17 +237,23 @@ class PqrController extends Controller
             AuditLogger::log(
                 $request,
                 'PQR',
-                'responder',
-                "Respondió la PQR #{$pqr->id}: {$pqr->asunto}",
+                $previousStatus === $newStatus ? 'completar_respuesta' : 'resolver',
+                ($previousStatus === $newStatus ? 'Completó la respuesta de la PQRS' : 'Resolvió la PQRS')." #{$pqr->id}: {$pqr->asunto}",
                 $pqr,
                 ['estado' => $previousStatus],
                 ['estado' => $newStatus, 'respuesta' => $validated['respuesta']],
             );
         });
 
-        $notifications->sendStatusChanged($request, $pqr->load('user'), $previousStatus, $newStatus);
+        if ($previousStatus !== $newStatus) {
+            $notifications->sendStatusChanged($request, $pqr->load('user'), $previousStatus, $newStatus);
+        }
 
-        return redirect()->route('pqrs.edit', $pqr)->with('success', 'La PQR fue respondida correctamente.');
+        return redirect()
+            ->route('pqrs.edit', $pqr)
+            ->with('success', $previousStatus === $newStatus
+                ? 'La respuesta faltante fue registrada correctamente.'
+                : 'La PQRS fue resuelta correctamente.');
     }
 
     public function updateResponse(Request $request, Pqr $pqr)
@@ -207,7 +284,7 @@ class PqrController extends Controller
                 $request,
                 'PQR',
                 'editar_respuesta',
-                "Editó la respuesta de la PQR #{$pqr->id}: {$pqr->asunto}",
+                "Editó la respuesta de la PQRS #{$pqr->id}: {$pqr->asunto}",
                 $pqr,
                 ['respuesta' => $previousResponse],
                 ['respuesta' => $validated['respuesta']],
@@ -222,9 +299,9 @@ class PqrController extends Controller
         Gate::authorize('delete', $pqr);
 
         $snapshot = $pqr->getAttributes();
-        AuditLogger::log($request, 'PQR', 'eliminar', "Eliminó la PQR #{$pqr->id}: {$pqr->asunto}", $pqr, $snapshot);
+        AuditLogger::log($request, 'PQR', 'eliminar', "Eliminó la PQRS #{$pqr->id}: {$pqr->asunto}", $pqr, $snapshot);
         $pqr->delete();
 
-        return redirect()->route('pqrs.index')->with('success', 'PQR eliminada correctamente.');
+        return redirect()->route('pqrs.index')->with('success', 'PQRS eliminada correctamente.');
     }
 }

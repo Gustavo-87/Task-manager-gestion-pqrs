@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 class ClearDemoData extends Command
 {
     protected $signature = 'demo:clear {--force : Ejecutar sin solicitar confirmación}';
-    protected $description = 'Elimina únicamente los usuarios, PQR y auditorías de demostración';
+    protected $description = 'Elimina únicamente los usuarios, PQRS y auditorías de demostración';
 
     public function handle(): int
     {

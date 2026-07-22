@@ -43,7 +43,7 @@ class CategoryController extends Controller
     public function destroy(Request $request, TipoPqr $category): RedirectResponse
     {
         if ($category->pqrs()->exists()) {
-            return back()->withErrors(['category' => 'No puedes eliminar una categoría que tenga PQR asociadas. Puedes desactivarla.']);
+            return back()->withErrors(['category' => 'No puedes eliminar una categoría que tenga PQRS asociadas. Puedes desactivarla.']);
         }
 
         AuditLogger::log($request, 'Categorías', 'eliminar', "Eliminó la categoría {$category->nombre}.", $category, $category->getAttributes());

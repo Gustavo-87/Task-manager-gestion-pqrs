@@ -26,14 +26,14 @@ class PqrReportService
             'generatedAt' => now(),
             'settings' => AppSetting::current(),
             'pqrs' => $pqrs,
-            'byStatus' => collect(['radicada', 'en_revision', 'respondida', 'cerrada'])
+            'byStatus' => collect(array_keys(Pqr::statuses()))
                 ->mapWithKeys(fn ($status) => [$status => $pqrs->where('estado', $status)->count()]),
             'byCategory' => $pqrs->groupBy(fn ($pqr) => $pqr->tipoPqr?->nombre ?? 'Sin categoría')
                 ->map->count()
                 ->sortKeys(),
-            'overdue' => $pqrs->filter(fn ($pqr) => ! in_array($pqr->estado, ['respondida', 'cerrada'], true)
+            'overdue' => $pqrs->filter(fn ($pqr) => ! in_array($pqr->estado, Pqr::inactiveStatuses(), true)
                 && $pqr->fecha_limite_respuesta->isBefore($today)),
-            'upcoming' => $pqrs->filter(fn ($pqr) => ! in_array($pqr->estado, ['respondida', 'cerrada'], true)
+            'upcoming' => $pqrs->filter(fn ($pqr) => ! in_array($pqr->estado, Pqr::inactiveStatuses(), true)
                 && $pqr->fecha_limite_respuesta->isSameDay($today->copy()->addDay())),
         ];
     }

@@ -65,28 +65,31 @@ class AuditTest extends TestCase
         $this->assertSame('127.0.0.1', $audit->ip_address);
     }
 
-    public function test_pqr_creation_and_state_change_are_audited(): void
+    public function test_pqr_creation_and_response_are_audited(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
         $tipo = TipoPqr::factory()->create();
 
         $this->actingAs($admin)->post(route('pqrs.store'), [
-            'asunto' => 'PQR auditable',
+            'asunto' => 'PQRS auditable',
             'descripcion' => 'Descripción para auditoría.',
             'fecha_radicacion' => '2026-07-14',
             'tipo_pqr_id' => $tipo->id,
         ])->assertRedirect(route('pqrs.index'));
 
-        $pqr = Pqr::where('asunto', 'PQR auditable')->firstOrFail();
+        $pqr = Pqr::where('asunto', 'PQRS auditable')->firstOrFail();
 
-        $this->actingAs($admin)->put(route('pqrs.update', $pqr), [
-            'asunto' => $pqr->asunto,
-            'descripcion' => $pqr->descripcion,
-            'fecha_radicacion' => '2026-07-14',
-            'fecha_limite_respuesta' => null,
-            'tipo_pqr_id' => $tipo->id,
-            'estado' => 'en_revision',
-        ])->assertRedirect(route('pqrs.edit', $pqr));
+        $this->actingAs($admin)
+            ->patch(route('pqrs.workflow.transition', $pqr), ['action' => 'enviar_revision'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+
+        $this->actingAs($admin)
+            ->patch(route('pqrs.workflow.transition', $pqr), ['action' => 'asignar_proceso'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+
+        $this->actingAs($admin)
+            ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Respuesta auditada desde la administración.'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
 
         $this->assertDatabaseHas('audits', [
             'module' => 'PQR',
@@ -96,7 +99,7 @@ class AuditTest extends TestCase
 
         $this->assertDatabaseHas('audits', [
             'module' => 'PQR',
-            'action' => 'cambiar_estado',
+            'action' => 'resolver',
             'auditable_id' => $pqr->id,
         ]);
     }

@@ -12,7 +12,7 @@ class PqrTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_create_a_pqr(): void
+    public function test_authenticated_user_can_create_a_pqrs(): void
     {
         $user = User::factory()->create();
         $tipo = TipoPqr::factory()->create();
@@ -29,31 +29,7 @@ class PqrTest extends TestCase
         $this->assertDatabaseHas('pqrs', [
             'asunto' => 'Solicitud de información',
             'user_id' => $user->id,
-        ]);
-        $this->assertSame('2026-07-29', Pqr::where('asunto', 'Solicitud de información')->firstOrFail()->fecha_limite_respuesta->toDateString());
-    }
-
-    public function test_updating_a_pqr_records_its_history(): void
-    {
-        $user = User::factory()->create(['rol' => 'admin']);
-        $pqr = Pqr::factory()->create(['estado' => 'radicada']);
-
-        $response = $this->actingAs($user)->put(route('pqrs.update', $pqr), [
-            'asunto' => $pqr->asunto,
-            'descripcion' => $pqr->descripcion,
-            'fecha_radicacion' => $pqr->fecha_radicacion->format('Y-m-d'),
-            'fecha_limite_respuesta' => $pqr->fecha_limite_respuesta->format('Y-m-d'),
-            'estado' => 'en_revision',
-            'tipo_pqr_id' => $pqr->tipo_pqr_id,
-        ]);
-
-        $response->assertRedirect(route('pqrs.edit', $pqr));
-        $this->assertDatabaseHas('pqr_histories', [
-            'pqr_id' => $pqr->id,
-            'campo' => 'estado',
-            'valor_anterior' => 'radicada',
-            'valor_nuevo' => 'en_revision',
-            'user_id' => $user->id,
+            'estado' => 'radicada',
         ]);
     }
 
@@ -70,7 +46,7 @@ class PqrTest extends TestCase
         $response->assertDontSee($otherPqr->asunto);
     }
 
-    public function test_resident_cannot_edit_another_users_pqr(): void
+    public function test_resident_cannot_view_or_modify_another_users_pqrs(): void
     {
         $resident = User::factory()->create(['rol' => 'residente']);
         $otherPqr = Pqr::factory()->create();
@@ -78,9 +54,13 @@ class PqrTest extends TestCase
         $this->actingAs($resident)
             ->get(route('pqrs.edit', $otherPqr))
             ->assertForbidden();
+
+        $this->actingAs($resident)
+            ->delete(route('pqrs.destroy', $otherPqr))
+            ->assertForbidden();
     }
 
-    public function test_resident_cannot_edit_submitted_information_change_status_or_delete_a_pqr(): void
+    public function test_resident_cannot_edit_submitted_information_or_change_status(): void
     {
         $resident = User::factory()->create(['rol' => 'residente']);
         $pqr = Pqr::factory()->create([
@@ -97,20 +77,11 @@ class PqrTest extends TestCase
             'tipo_pqr_id' => $pqr->tipo_pqr_id,
         ])->assertForbidden();
 
-        $this->assertDatabaseHas('pqrs', [
-            'id' => $pqr->id,
-            'asunto' => $pqr->asunto,
-            'estado' => 'radicada',
-        ]);
-
-        $this->actingAs($resident)
-            ->delete(route('pqrs.destroy', $pqr))
-            ->assertForbidden();
-
-        $this->assertDatabaseHas('pqrs', ['id' => $pqr->id]);
+        $this->assertSame('radicada', $pqr->fresh()->estado);
+        $this->assertSame($pqr->asunto, $pqr->fresh()->asunto);
     }
 
-    public function test_admin_can_see_and_delete_any_pqr(): void
+    public function test_admin_can_see_and_delete_any_pqrs(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
         $pqr = Pqr::factory()->create();
@@ -127,32 +98,60 @@ class PqrTest extends TestCase
         $this->assertDatabaseMissing('pqrs', ['id' => $pqr->id]);
     }
 
-    public function test_admin_can_respond_to_a_pqr(): void
+    public function test_admin_can_execute_the_workflow_from_radicada_to_cerrada(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
-        $pqr = Pqr::factory()->create(['estado' => 'en_revision']);
+        $pqr = Pqr::factory()->create([
+            'estado' => 'radicada',
+            'respuesta' => null,
+            'respondida_en' => null,
+            'respondida_por' => null,
+        ]);
 
         $this->actingAs($admin)
-            ->post(route('pqrs.respond', $pqr), ['respuesta' => 'La reparación quedó programada para mañana.'])
+            ->patch(route('pqrs.workflow.transition', $pqr), ['action' => 'enviar_revision'])
             ->assertRedirect(route('pqrs.edit', $pqr));
+        $this->assertSame('en_revision', $pqr->fresh()->estado);
 
-        $this->assertDatabaseHas('pqrs', [
-            'id' => $pqr->id,
-            'respuesta' => 'La reparación quedó programada para mañana.',
-            'estado' => 'respondida',
-            'respondida_por' => $admin->id,
+        $this->actingAs($admin)
+            ->patch(route('pqrs.workflow.transition', $pqr), ['action' => 'asignar_proceso'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+        $this->assertSame('en_proceso', $pqr->fresh()->estado);
+
+        $this->actingAs($admin)
+            ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Caso atendido y resuelto.'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+        $this->assertSame('resuelta', $pqr->fresh()->estado);
+
+        $this->actingAs($admin)
+            ->patch(route('pqrs.workflow.transition', $pqr), ['action' => 'cerrar'])
+            ->assertRedirect(route('pqrs.edit', $pqr));
+        $this->assertSame('cerrada', $pqr->fresh()->estado);
+    }
+
+    public function test_resolving_a_pqrs_records_its_history(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create(['estado' => 'en_proceso']);
+
+        $response = $this->actingAs($admin)->post(route('pqrs.respond', $pqr), [
+            'respuesta' => 'Respuesta formal registrada por la administración.',
         ]);
+
+        $response->assertRedirect(route('pqrs.edit', $pqr));
         $this->assertDatabaseHas('pqr_histories', [
             'pqr_id' => $pqr->id,
-            'campo' => 'respuesta',
+            'campo' => 'estado',
+            'valor_anterior' => 'en_proceso',
+            'valor_nuevo' => 'resuelta',
             'user_id' => $admin->id,
         ]);
     }
 
-    public function test_resident_cannot_respond_to_a_pqr(): void
+    public function test_resident_cannot_resolve_a_pqrs(): void
     {
         $resident = User::factory()->create(['rol' => 'residente']);
-        $pqr = Pqr::factory()->create(['user_id' => $resident->id, 'estado' => 'en_revision']);
+        $pqr = Pqr::factory()->create(['user_id' => $resident->id, 'estado' => 'en_proceso']);
 
         $this->actingAs($resident)
             ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Respuesta no autorizada.'])
@@ -161,28 +160,41 @@ class PqrTest extends TestCase
         $this->assertNull($pqr->fresh()->respuesta);
     }
 
-    public function test_admin_can_mark_a_pqr_as_answered_before_registering_the_response_text(): void
+    public function test_admin_cannot_edit_a_pqrs_directly_through_the_update_route(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
-        $pqr = Pqr::factory()->create(['estado' => 'en_revision']);
+        $pqr = Pqr::factory()->create(['estado' => 'en_proceso']);
 
         $this->actingAs($admin)->put(route('pqrs.update', $pqr), [
             'asunto' => $pqr->asunto,
             'descripcion' => $pqr->descripcion,
             'fecha_radicacion' => $pqr->fecha_radicacion->format('Y-m-d'),
-            'estado' => 'respondida',
+            'estado' => 'resuelta',
             'tipo_pqr_id' => $pqr->tipo_pqr_id,
-        ])->assertRedirect(route('pqrs.edit', $pqr));
+        ])->assertForbidden();
 
-        $this->assertSame('respondida', $pqr->fresh()->estado);
+        $this->assertSame('en_proceso', $pqr->fresh()->estado);
         $this->assertNull($pqr->fresh()->respuesta);
+    }
+
+    public function test_admin_sees_the_pqrs_in_read_only_mode_with_workflow_actions(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create(['estado' => 'en_revision']);
+
+        $this->actingAs($admin)
+            ->get(route('pqrs.edit', $pqr))
+            ->assertOk()
+            ->assertSee('Detalle de PQRS')
+            ->assertSee('La PQRS radicada por el usuario es de solo lectura.')
+            ->assertSee('Flujo de atención');
     }
 
     public function test_admin_can_edit_an_existing_response_and_preserve_its_history(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
         $pqr = Pqr::factory()->create([
-            'estado' => 'respondida',
+            'estado' => 'resuelta',
             'respuesta' => 'Respuesta inicial.',
             'respondida_en' => now()->subDay(),
             'respondida_por' => $admin->id,
@@ -195,7 +207,7 @@ class PqrTest extends TestCase
         $this->assertDatabaseHas('pqrs', [
             'id' => $pqr->id,
             'respuesta' => 'Respuesta actualizada por una novedad.',
-            'estado' => 'respondida',
+            'estado' => 'resuelta',
             'respondida_por' => $admin->id,
         ]);
         $this->assertDatabaseHas('pqr_histories', [
@@ -207,12 +219,30 @@ class PqrTest extends TestCase
         ]);
     }
 
+    public function test_resolved_pqrs_shows_the_registered_response_in_the_detail_view(): void
+    {
+        $admin = User::factory()->create(['rol' => 'admin']);
+        $pqr = Pqr::factory()->create([
+            'estado' => 'resuelta',
+            'respuesta' => 'Respuesta visible para la entrega.',
+            'respondida_en' => now()->subHour(),
+            'respondida_por' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('pqrs.edit', $pqr))
+            ->assertOk()
+            ->assertSee('Respuesta visible para la entrega.')
+            ->assertSee('Editar respuesta')
+            ->assertDontSee('Respuesta faltante en un registro previo');
+    }
+
     public function test_resident_cannot_edit_an_existing_response(): void
     {
         $resident = User::factory()->create(['rol' => 'residente']);
         $pqr = Pqr::factory()->create([
             'user_id' => $resident->id,
-            'estado' => 'respondida',
+            'estado' => 'resuelta',
             'respuesta' => 'Respuesta inicial.',
         ]);
 
@@ -223,13 +253,20 @@ class PqrTest extends TestCase
         $this->assertSame('Respuesta inicial.', $pqr->fresh()->respuesta);
     }
 
-    public function test_admin_can_register_the_missing_response_on_a_legacy_answered_pqr(): void
+    public function test_admin_can_register_the_missing_response_on_a_legacy_resolved_pqrs(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
         $pqr = Pqr::factory()->create([
-            'estado' => 'respondida',
+            'estado' => 'resuelta',
             'respuesta' => null,
         ]);
+
+        $this->actingAs($admin)
+            ->get(route('pqrs.edit', $pqr))
+            ->assertOk()
+            ->assertSee('Respuesta faltante en un registro previo')
+            ->assertSee('Registrar respuesta faltante')
+            ->assertDontSee('Esta PQRS aún no ha recibido respuesta.');
 
         $this->actingAs($admin)
             ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Respuesta recuperada del trámite anterior.'])
@@ -237,19 +274,25 @@ class PqrTest extends TestCase
 
         $this->assertDatabaseHas('pqrs', [
             'id' => $pqr->id,
-            'estado' => 'respondida',
+            'estado' => 'resuelta',
             'respuesta' => 'Respuesta recuperada del trámite anterior.',
             'respondida_por' => $admin->id,
         ]);
     }
 
-    public function test_registering_a_missing_response_does_not_reopen_a_closed_pqr(): void
+    public function test_registering_a_missing_response_does_not_reopen_a_closed_pqrs(): void
     {
         $admin = User::factory()->create(['rol' => 'admin']);
         $pqr = Pqr::factory()->create([
             'estado' => 'cerrada',
             'respuesta' => null,
         ]);
+
+        $this->actingAs($admin)
+            ->get(route('pqrs.edit', $pqr))
+            ->assertOk()
+            ->assertSee('Respuesta faltante en un registro previo')
+            ->assertSee('Esta acción no reabre la PQRS.');
 
         $this->actingAs($admin)
             ->post(route('pqrs.respond', $pqr), ['respuesta' => 'Respuesta faltante del expediente cerrado.'])

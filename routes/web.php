@@ -40,6 +40,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/pqrs/{pqr}/responder', [PqrController::class, 'respond'])
         ->name('pqrs.respond');
 
+    Route::patch('/pqrs/{pqr}/flujo', [PqrController::class, 'transitionWorkflow'])
+        ->name('pqrs.workflow.transition');
+
     Route::patch('/pqrs/{pqr}/respuesta', [PqrController::class, 'updateResponse'])
         ->name('pqrs.response.update');
 

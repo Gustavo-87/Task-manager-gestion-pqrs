@@ -17,7 +17,7 @@ class SeedDemoData extends Command
         }
 
         $this->call('db:seed', ['--class' => DemoDataSeeder::class, '--force' => true]);
-        $this->info('Datos de demostración cargados: 14 usuarios y 40 PQR.');
+        $this->info('Datos de demostración cargados: 14 usuarios y 40 PQRS.');
         $this->line('Contraseña común: DemoPQRS2026!');
 
         return self::SUCCESS;
