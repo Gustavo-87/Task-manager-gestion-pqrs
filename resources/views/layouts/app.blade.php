@@ -13,7 +13,7 @@
         <div x-data="{ sidebarOpen: false }" class="min-h-screen">
             @include('layouts.navigation')
 
-            <div class="lg:pl-64">
+            <div class="lg:pl-80">
                 <header class="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
                     <button @click="sidebarOpen = true" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Abrir menú">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
