@@ -27,16 +27,6 @@
                         <div class="mt-3 text-3xl font-bold text-indigo-700">{{ $settings->response_days }} días</div>
                         <p class="mt-1 text-sm text-gray-500">Días calendario desde la radicación.</p>
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-900">Correo SMTP</h3>
-                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $mailConfigured ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">{{ $mailConfigured ? 'Configurado' : 'Pendiente' }}</span>
-                        </div>
-                        <p class="mt-3 text-sm text-gray-500">Las credenciales se administran de forma segura desde el archivo <code>.env</code>.</p>
-                        <form method="POST" action="{{ route('configuration.test-email') }}" class="mt-4">@csrf
-                            <button @disabled(! $mailConfigured) class="w-full rounded-md border px-4 py-2 text-sm font-semibold {{ $mailConfigured ? 'border-indigo-600 text-indigo-700 hover:bg-indigo-50' : 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-400' }}">Enviar correo de prueba</button>
-                        </form>
-                    </div>
                 </div>
             </div>
 
