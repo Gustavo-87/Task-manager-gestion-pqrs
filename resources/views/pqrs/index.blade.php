@@ -6,18 +6,37 @@
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
         @if (session('success'))<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">{{ session('success') }}</div>@endif
 
+        @php
+            $selectedStatus = request('estado');
+            $searchTerm = request('buscar');
+            $summaryCards = [
+                ['key' => null, 'label' => 'Total', 'value' => $stats->total ?? 0, 'style' => 'border-indigo-200 bg-indigo-50 text-indigo-700'],
+                ['key' => 'radicada', 'label' => 'Radicadas', 'value' => $stats->radicadas ?? 0, 'style' => 'border-green-200 bg-green-50 text-green-700'],
+                ['key' => 'en_revision', 'label' => 'En revisión', 'value' => $stats->en_revision ?? 0, 'style' => 'border-yellow-200 bg-yellow-50 text-yellow-700'],
+                ['key' => 'en_proceso', 'label' => 'En proceso', 'value' => $stats->en_proceso ?? 0, 'style' => 'border-violet-200 bg-violet-50 text-violet-700'],
+                ['key' => 'en_espera', 'label' => 'En espera', 'value' => $stats->en_espera ?? 0, 'style' => 'border-amber-200 bg-amber-50 text-amber-700'],
+                ['key' => 'rechazada', 'label' => 'Rechazadas', 'value' => $stats->rechazadas ?? 0, 'style' => 'border-rose-200 bg-rose-50 text-rose-700'],
+                ['key' => 'resuelta', 'label' => 'Resueltas', 'value' => $stats->resueltas ?? 0, 'style' => 'border-orange-200 bg-orange-50 text-orange-700'],
+                ['key' => 'cerrada', 'label' => 'Cerradas', 'value' => $stats->cerradas ?? 0, 'style' => 'border-blue-200 bg-blue-50 text-blue-700'],
+            ];
+        @endphp
+
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            @foreach ([
-                ['Total', $stats->total ?? 0, 'border-indigo-200 bg-indigo-50 text-indigo-700'],
-                ['Radicadas', $stats->radicadas ?? 0, 'border-green-200 bg-green-50 text-green-700'],
-                ['En revisión', $stats->en_revision ?? 0, 'border-yellow-200 bg-yellow-50 text-yellow-700'],
-                ['En proceso', $stats->en_proceso ?? 0, 'border-violet-200 bg-violet-50 text-violet-700'],
-                ['En espera', $stats->en_espera ?? 0, 'border-amber-200 bg-amber-50 text-amber-700'],
-                ['Rechazadas', $stats->rechazadas ?? 0, 'border-rose-200 bg-rose-50 text-rose-700'],
-                ['Resueltas', $stats->resueltas ?? 0, 'border-orange-200 bg-orange-50 text-orange-700'],
-                ['Cerradas', $stats->cerradas ?? 0, 'border-blue-200 bg-blue-50 text-blue-700'],
-            ] as [$label, $value, $style])
-                <div class="rounded-xl border p-4 shadow-sm {{ $style }}"><p class="text-xs font-semibold uppercase tracking-wide opacity-80">{{ $label }}</p><p class="mt-2 text-2xl font-bold">{{ $value }}</p></div>
+            @foreach ($summaryCards as $card)
+                @php
+                    $isActive = $card['key'] === null ? blank($selectedStatus) : $selectedStatus === $card['key'];
+                    $cardQuery = array_filter([
+                        'buscar' => $searchTerm,
+                        'estado' => $card['key'],
+                    ], fn ($value) => filled($value));
+                @endphp
+                <a
+                    href="{{ route('pqrs.index', $cardQuery) }}"
+                    class="rounded-xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $card['style'] }} {{ $isActive ? 'ring-2 ring-offset-2 ring-slate-400' : '' }}"
+                >
+                    <p class="text-xs font-semibold uppercase tracking-wide opacity-80">{{ $card['label'] }}</p>
+                    <p class="mt-2 text-2xl font-bold">{{ $card['value'] }}</p>
+                </a>
             @endforeach
         </div>
 
