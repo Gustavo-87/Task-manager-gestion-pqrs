@@ -1,84 +1,64 @@
-# Gestión de PQRs para Conjuntos Residenciales
+# Resuelve PQRS Copropiedades
 
-Proyecto desarrollado en Laravel y MySQL como aplicación del proyecto guía Task Manager del seminario.
+Aplicación web para administrar peticiones, quejas, reclamos y sugerencias en conjuntos residenciales. Desarrollada con Laravel, MySQL y Vite.
 
-## Descripción
+## Funcionalidades
 
-Este sistema permite gestionar PQRs presentadas por residentes de conjuntos residenciales en Cartago, Valle del Cauca.
+- Radicación y seguimiento de PQRS.
+- Roles de administrador, gestor, apoyo, auditor y residente.
+- Asignación de responsables, estados, vencimientos y recordatorios.
+- Respuestas, adjuntos, comentarios internos, etiquetas y auditoría.
+- Panel con estadísticas, filtros e indicadores de cumplimiento.
+- Informes profesionales en PDF y Excel.
+- Administración de usuarios y configuración de la copropiedad.
+- Notificaciones y recuperación de contraseña.
+- Diseño adaptable para escritorio y dispositivos móviles.
 
-El proyecto implementa operaciones CRUD sobre las PQRs, permitiendo crear, listar, editar, eliminar, buscar y filtrar registros según su estado.
+## Requisitos
 
-## Correspondencia con el proyecto Task Manager
+- PHP 8.3 o superior.
+- Composer.
+- Node.js y npm.
+- MySQL 8.4 o una base compatible.
+- Docker Desktop, opcionalmente mediante Laravel Sail.
 
-| Proyecto Task Manager | Proyecto Gestión PQRs |
-|---|---|
-| Task | Pqr |
-| Category | TipoPqr |
-| tasks | pqrs |
-| categories | tipo_pqrs |
-| TaskController | PqrController |
-| resources/views/tasks | resources/views/pqrs |
-| category_id | tipo_pqr_id |
-| user_id | user_id |
+## Instalación local
 
-## Entidades principales
+```bash
+cp .env.example .env
+composer install
+npm install
+php artisan key:generate
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
 
-### TipoPqr
-
-Representa la clasificación de la solicitud:
-
-- Petición
-- Queja
-- Reclamo
-- Sugerencia
-- Solicitud
-
-### Pqr
-
-Representa la solicitud presentada por un residente o usuario del sistema.
-
-Campos principales:
-
-- asunto
-- descripcion
-- fecha_radicacion
-- fecha_limite_respuesta
-- estado
-- user_id
-- tipo_pqr_id
-
-## Estados de una PQR
-
-- radicada
-- en_revision
-- respondida
-- cerrada
-
-## Ejecución del proyecto
-
-Levantar los contenedores:
+Con Laravel Sail:
 
 ```bash
 ./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate --seed
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run build
 ```
-## Ejecutar migraciones y seeders:
 
-./vendor/bin/sail php artisan migrate:fresh --seed
+La aplicación estará disponible en `http://localhost` cuando se utilice la configuración Docker incluida.
 
-Abrir en el navegador: http://localhost:8085/pqrs
+## Pruebas
 
-## Funcionalidades implementadas
+```bash
+php artisan test
+```
 
-- Listado de PQRs
-- Creación de PQRs
-- Edición de PQRs
-- Eliminación de PQRs
-- Búsqueda por asunto
-- Filtro por estado
-- Relación entre PQR y TipoPqr
-- Relación entre PQR y User
+## Seguridad
 
-## Evidencia de funcionamiento
+- No publiques el archivo `.env`.
+- Cambia las credenciales de demostración antes de exponer la aplicación.
+- Usa `APP_ENV=production` y `APP_DEBUG=false` en producción.
+- Configura almacenamiento persistente para logos y adjuntos.
+- Realiza copias de seguridad periódicas de la base de datos y archivos.
 
-![Listado de PQRs](docs/evidencias/listado_pqrs.png)
+## Licencia
 
+Proyecto académico y de demostración. Antes de utilizarlo con información real, revisa las obligaciones de protección de datos aplicables.

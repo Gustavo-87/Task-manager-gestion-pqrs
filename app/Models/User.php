@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'role', 'password', 'tower', 'unit', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,4 +33,8 @@ class User extends Authenticatable
 {
     return $this->hasMany(Pqr::class);
 }
+   public function assignedPqrs() { return $this->hasMany(Pqr::class, 'assigned_to_id'); }
+   public function canViewAllPqrs(): bool { return in_array($this->role,['admin','gestor','auditor','apoyo'],true); }
+   public function canManagePqrs(): bool { return in_array($this->role,['admin','gestor','apoyo'],true); }
+   public function isAdmin(): bool { return $this->role === 'admin'; }
 }
