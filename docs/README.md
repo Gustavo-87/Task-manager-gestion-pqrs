@@ -87,6 +87,7 @@ Los estados utilizados en este índice son:
 | [Product Backlog](04-desarrollo-agil/product-backlog.md) | En construcción | Organizar las Épicas e Historias de Usuario iniciales desde la perspectiva del negocio. |
 | [Sprint 1 — Organización y Copropiedad](04-desarrollo-agil/sprint-1-organizacion-copropiedad.md) | Completado | Registrar la implementación y validación de la primera evolución estructural hacia Organización y Copropiedad sin cambios visibles. |
 | [Sprint 2 — Identidad, Membresías y Contexto Operativo](04-desarrollo-agil/sprint-2-identidad-membresias-contexto.md) | Completado | Registrar la identidad contextual, su equivalencia comprobada y la sincronización con `users.role` sin activarla como fuente de autorización. |
+| [Sprint 3 — Contextualización de PQRS](04-desarrollo-agil/sprint-3-contextualizacion-pqrs.md) | Completado | Registrar el aislamiento contextual de PQRS, consultas, rutas, reportes y procesos programados sin habilitar multi-copropiedad visible. |
 | [Pruebas automatizadas](04-desarrollo-agil/pruebas-automatizadas.md) | Pendiente | Inventariar la cobertura existente y sus límites. |
 
 ### 05. Arquitectura
@@ -192,6 +193,6 @@ estados de este índice deben actualizarse en el mismo cambio documental.
 
 ## Control documental
 
-- **Versión:** v1.13
+- **Versión:** v1.14
 - **Fecha de creación:** 30 de julio de 2026
 - **Fecha de última actualización:** 31 de julio de 2026

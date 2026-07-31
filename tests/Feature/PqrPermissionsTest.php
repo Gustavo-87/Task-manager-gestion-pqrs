@@ -8,11 +8,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\CreatesInstitutionalContext;
 use Tests\TestCase;
 
 class PqrPermissionsTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreatesInstitutionalContext, RefreshDatabase;
 
     public function test_resident_can_only_view_their_own_pqrs(): void
     {
@@ -44,6 +45,7 @@ class PqrPermissionsTest extends TestCase
 
     public function test_resident_can_submit_a_pqr_with_a_private_attachment(): void
     {
+        $this->createInstitutionalContext();
         Storage::fake('local');
         $resident = User::factory()->create(['role' => 'residente']);
         $tipo = TipoPqr::create(['nombre' => 'Petición', 'descripcion' => 'Petición']);

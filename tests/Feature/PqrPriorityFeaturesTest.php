@@ -6,11 +6,13 @@ use App\Models\User;
 use App\Notifications\PqrEventNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\CreatesInstitutionalContext;
 use Tests\TestCase;
 class PqrPriorityFeaturesTest extends TestCase {
-    use RefreshDatabase;
+    use CreatesInstitutionalContext, RefreshDatabase;
     public function test_creating_a_pqr_notifies_managers_and_records_activity(): void
     {
+        $this->createInstitutionalContext();
         Notification::fake(); $manager = User::factory()->create(['role'=>'gestor']); $resident = User::factory()->create(['role'=>'residente']); $type = TipoPqr::factory()->create();
         $this->actingAs($resident)->post(route('pqrs.store'), ['asunto'=>'Ruido nocturno','descripcion'=>'Se presenta ruido frecuente en la noche.','fecha_radicacion'=>now()->format('Y-m-d'),'tipo_pqr_id'=>$type->id])->assertRedirect();
         $pqr = Pqr::firstOrFail(); $this->assertDatabaseHas('pqr_activities',['pqr_id'=>$pqr->id,'action'=>'created']); Notification::assertSentTo($manager,PqrEventNotification::class);

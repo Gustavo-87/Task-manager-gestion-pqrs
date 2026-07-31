@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 
 class Pqr extends Model
@@ -32,6 +33,16 @@ class Pqr extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function organizacion(): BelongsTo
+    {
+        return $this->belongsTo(Organizacion::class);
+    }
+
+    public function copropiedad(): BelongsTo
+    {
+        return $this->belongsTo(Copropiedad::class);
     }
 
     public function tipoPqr()

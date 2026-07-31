@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Contexto\ContextoOperativo;
+use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\Pqr;
 use App\Models\SiteSetting;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -20,10 +22,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
-    private function query(Request $request): Collection
+    private function query(
+        Request $request,
+        ContextoOperativo $contexto,
+        ConsultaPqrsContextuales $consultaPqrs
+    ): Collection
     {
         $this->authorize('viewAny', Pqr::class);
-        $query = Pqr::with(['user', 'tipoPqr', 'assignee']);
+        $query = $consultaPqrs->para($contexto)->with(['user', 'tipoPqr', 'assignee']);
         if (! $request->user()->canViewAllPqrs()) $query->where('user_id', $request->user()->id);
         if ($request->filled('estado') && ! in_array($request->estado, ['pendientes', 'por_vencer'])) $query->where('estado', $request->estado);
         if ($request->estado === 'pendientes') $query->whereIn('estado', ['radicada', 'en_revision']);
@@ -37,9 +43,13 @@ class ReportController extends Controller
         return $query->orderBy('fecha_radicacion')->get();
     }
 
-    private function reportData(Request $request): array
+    private function reportData(
+        Request $request,
+        ContextoOperativo $contexto,
+        ConsultaPqrsContextuales $consultaPqrs
+    ): array
     {
-        $rows = $this->query($request);
+        $rows = $this->query($request, $contexto, $consultaPqrs);
         $open = $rows->whereIn('estado', ['radicada', 'en_revision']);
         $upcoming = $open->filter(fn (Pqr $pqr) => $pqr->fecha_limite_respuesta?->between(today(), today()->addDays(3)))->sortBy('fecha_limite_respuesta');
         $overdue = $open->filter(fn (Pqr $pqr) => $pqr->fecha_limite_respuesta?->isBefore(today()));
@@ -63,9 +73,13 @@ class ReportController extends Controller
         ];
     }
 
-    public function csv(Request $request): StreamedResponse
+    public function csv(
+        Request $request,
+        ContextoOperativo $contexto,
+        ConsultaPqrsContextuales $consultaPqrs
+    ): StreamedResponse
     {
-        $rows = $this->query($request);
+        $rows = $this->query($request, $contexto, $consultaPqrs);
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w'); fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['Radicado', 'Asunto', 'Tipo', 'Estado', 'Residente', 'Responsable', 'Radicación', 'Límite']);
@@ -74,9 +88,13 @@ class ReportController extends Controller
         }, 'informe-pqrs-'.now()->format('Ymd').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function xlsx(Request $request): StreamedResponse
+    public function xlsx(
+        Request $request,
+        ContextoOperativo $contexto,
+        ConsultaPqrsContextuales $consultaPqrs
+    ): StreamedResponse
     {
-        $data = $this->reportData($request);
+        $data = $this->reportData($request, $contexto, $consultaPqrs);
         $book = new Spreadsheet();
         $summary = $book->getActiveSheet(); $summary->setTitle('Resumen'); $summary->setShowGridlines(false);
         $color = ltrim($data['settings']->color_principal ?: '#12382f', '#');
@@ -122,9 +140,13 @@ class ReportController extends Controller
         return response()->streamDownload(function () use ($book) { (new Xlsx($book))->save('php://output'); }, 'informe-pqrs-'.now()->format('Ymd').'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
-    public function pdf(Request $request): Response
+    public function pdf(
+        Request $request,
+        ContextoOperativo $contexto,
+        ConsultaPqrsContextuales $consultaPqrs
+    ): Response
     {
-        $data = $this->reportData($request);
+        $data = $this->reportData($request, $contexto, $consultaPqrs);
         return Pdf::loadView('reports.pqrs', $data)->setPaper('a4', 'landscape')->download('informe-pqrs-'.now()->format('Ymd').'.pdf');
     }
 

@@ -1,10 +1,12 @@
 <?php
 namespace App\Http\Controllers;
+use App\Application\Contexto\ContextoOperativo;
+use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\{AuditLog,AutomationRule,Pqr,PqrTag,ResponseTemplate,SatisfactionSurvey,TipoPqr,User};
 use Illuminate\Http\RedirectResponse; use Illuminate\Http\Request; use Illuminate\View\View;
 class ComplementaryController extends Controller {
  private function admin(Request $r):void{abort_unless($r->user()->isAdmin(),403);} private function manager(Request $r):void{abort_unless(in_array($r->user()->role,['admin','gestor'],true),403);}
- public function workload(Request $r):View{$this->manager($r);$users=User::whereIn('role',['admin','gestor','apoyo'])->withCount(['assignedPqrs as active_count'=>fn($q)=>$q->whereIn('estado',['radicada','en_revision']),'assignedPqrs as overdue_count'=>fn($q)=>$q->whereIn('estado',['radicada','en_revision'])->whereDate('fecha_limite_respuesta','<',today()),'assignedPqrs as completed_count'=>fn($q)=>$q->whereIn('estado',['respondida','cerrada'])])->get();return view('management.workload',compact('users'));}
+ public function workload(Request $r,ContextoOperativo $contexto,ConsultaPqrsContextuales $consulta):View{$this->manager($r);$scope=fn($q)=>$consulta->restringir($q,$contexto);$users=User::whereIn('role',['admin','gestor','apoyo'])->withCount(['assignedPqrs as active_count'=>fn($q)=>$scope($q)->whereIn('estado',['radicada','en_revision']),'assignedPqrs as overdue_count'=>fn($q)=>$scope($q)->whereIn('estado',['radicada','en_revision'])->whereDate('fecha_limite_respuesta','<',today()),'assignedPqrs as completed_count'=>fn($q)=>$scope($q)->whereIn('estado',['respondida','cerrada'])])->get();return view('management.workload',compact('users'));}
  public function tools(Request $r):View{$this->manager($r);return view('management.tools',['templates'=>ResponseTemplate::latest()->get(),'tags'=>PqrTag::orderBy('name')->get(),'rules'=>AutomationRule::with(['type','assignee'])->latest()->get(),'types'=>TipoPqr::orderBy('nombre')->get(),'managers'=>User::whereIn('role',['admin','gestor','apoyo'])->orderBy('name')->get()]);}
  public function template(Request $r):RedirectResponse{$this->manager($r);$d=$r->validate(['name'=>'required|max:100','subject'=>'nullable|max:150','body'=>'required|max:10000']);ResponseTemplate::create($d+['created_by'=>$r->user()->id]);return back()->with('success','Plantilla creada.');}
  public function tag(Request $r):RedirectResponse{$this->manager($r);PqrTag::create($r->validate(['name'=>'required|max:60|unique:pqr_tags','color'=>'required|regex:/^#[0-9A-Fa-f]{6}$/']));return back()->with('success','Etiqueta creada.');}

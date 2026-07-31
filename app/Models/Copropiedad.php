@@ -45,4 +45,9 @@ class Copropiedad extends Model
     {
         return $this->hasMany(MembresiaCopropiedad::class);
     }
+
+    public function pqrs(): HasMany
+    {
+        return $this->hasMany(Pqr::class);
+    }
 }

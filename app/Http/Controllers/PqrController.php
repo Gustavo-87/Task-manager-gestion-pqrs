@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Contexto\ContextoOperativo;
+use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\Pqr;
 use App\Models\TipoPqr;
 use Carbon\Carbon;
@@ -15,11 +17,15 @@ use App\Models\ResponseTemplate;
 
 class PqrController extends Controller
 {
-    public function index(Request $request)
+    public function index(
+        Request $request,
+        ContextoOperativo $contexto,
+        ConsultaPqrsContextuales $consultaPqrs
+    )
     {
         $this->authorize('viewAny', Pqr::class);
 
-        $baseQuery = Pqr::query();
+        $baseQuery = $consultaPqrs->para($contexto);
         if (! $request->user()->canViewAllPqrs()) {
             $baseQuery->where('user_id', $request->user()->id);
         }
@@ -79,7 +85,7 @@ class PqrController extends Controller
         return view('pqrs.create', compact('tipos'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ContextoOperativo $contexto)
     {
         $request->validate([
             'asunto' => 'required|string|max:150',
@@ -93,10 +99,19 @@ class PqrController extends Controller
 
         $this->authorize('create', Pqr::class);
         $data = $request->only(['asunto', 'descripcion', 'fecha_radicacion', 'fecha_limite_respuesta', 'tipo_pqr_id']);
-        $data['user_id'] = $request->user()->id;
 
-        $pqr = DB::transaction(function () use ($data, $request) {
-            $pqr = Pqr::create($data);
+        $pqr = DB::transaction(function () use ($contexto, $data, $request) {
+            if ($contexto->copropiedad->organizacion_id !== $contexto->organizacion->id) {
+                throw new \RuntimeException(
+                    'No es posible radicar la PQR porque el contexto institucional es inconsistente.'
+                );
+            }
+
+            $pqr = new Pqr($data);
+            $pqr->user()->associate($request->user());
+            $pqr->organizacion()->associate($contexto->organizacion);
+            $pqr->copropiedad()->associate($contexto->copropiedad);
+            $pqr->save();
             if ($rule = AutomationRule::where('active', true)->where(fn($q) => $q->whereNull('tipo_pqr_id')->orWhere('tipo_pqr_id', $pqr->tipo_pqr_id))->first()) {
                 $pqr->update(['assigned_to_id' => $rule->assign_to_id, 'estado' => $rule->set_status]);
             }

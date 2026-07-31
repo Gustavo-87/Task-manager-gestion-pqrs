@@ -2,11 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Application\Contexto\ContextResolver;
+use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\User;
 use App\Models\TipoPqr;
 use App\Models\Pqr;
 use App\Models\SiteSetting;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 use RuntimeException;
 
 class DatabaseSeeder extends Seeder
@@ -27,7 +30,19 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        SiteSetting::firstOrCreate([], SiteSetting::defaults());
+        $siteSetting = SiteSetting::firstOrCreate([], SiteSetting::defaults());
+        if ($siteSetting->organizacion_id === null || $siteSetting->copropiedad_id === null) {
+            $exitCode = Artisan::call('resuelve:crear-contexto-inicial');
+            if ($exitCode !== 0) {
+                throw new RuntimeException('No fue posible crear el contexto inicial para los datos de demostración.');
+            }
+            $siteSetting->refresh();
+        }
+        $contexto = app(ContextResolver::class)->resolverExplicito(
+            $siteSetting->organizacion_id,
+            $siteSetting->copropiedad_id
+        );
+        $consultaPqrs = app(ConsultaPqrsContextuales::class);
 
         $user = User::updateOrCreate([
             'email' => 'gestionpqrs7@gmail.com',
@@ -71,7 +86,7 @@ class DatabaseSeeder extends Seeder
         $tipos = $tipos->keyBy('nombre');
 
         // Retira únicamente el lote ficticio original generado por Faker.
-        $legacyDemoIds = Pqr::whereBetween('id', [1, 30])
+        $legacyDemoIds = $consultaPqrs->para($contexto)->whereBetween('id', [1, 30])
             ->whereHas('user', fn ($query) => $query->where('email', 'admin@pqrs.com'))
             ->pluck('id');
         Pqr::destroy($legacyDemoIds);
@@ -92,7 +107,11 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($cases as $case) {
-            $pqr = Pqr::updateOrCreate(['asunto' => $case['asunto']], [
+            $pqr = $consultaPqrs->para($contexto)
+                ->where('asunto', $case['asunto'])
+                ->first() ?? new Pqr();
+            $pqr->fill([
+                'asunto' => $case['asunto'],
                 'descripcion' => $case['descripcion'],
                 'fecha_radicacion' => today()->addDays($case['radicada']),
                 'fecha_limite_respuesta' => today()->addDays($case['limite']),
@@ -101,6 +120,9 @@ class DatabaseSeeder extends Seeder
                 'assigned_to_id' => $user->id,
                 'tipo_pqr_id' => $tipos[$case['tipo']]->id,
             ]);
+            $pqr->organizacion()->associate($contexto->organizacion);
+            $pqr->copropiedad()->associate($contexto->copropiedad);
+            $pqr->save();
             $createdAt = now()->subMonths($case['month'])->subDays(($pqr->id % 18) + 1);
             $pqr->forceFill(['created_at' => $createdAt, 'updated_at' => $createdAt])->saveQuietly();
         }
