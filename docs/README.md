@@ -90,6 +90,7 @@ Los estados utilizados en este índice son:
 | Documento | Estado | Propósito |
 | --- | --- | --- |
 | [Arquitectura actual](05-arquitectura/arquitectura-actual.md) | Completado | Describir la estructura monolítica Laravel, sus capas y flujos. |
+| [Arquitectura objetivo](05-arquitectura/arquitectura-objetivo.md) | Completado | Definir la evolución incremental hacia un monolito modular SaaS multi-copropiedad. |
 
 ### 06. Inteligencia artificial
 
@@ -118,9 +119,18 @@ Los estados utilizados en este índice son:
 
 ### 10. Registros de decisiones arquitectónicas
 
-Esta sección alojará registros de decisiones arquitectónicas únicamente cuando
-exista evidencia de una decisión tomada. La línea base no presume decisiones
-que no estén registradas o implementadas.
+| Documento | Estado | Propósito |
+| --- | --- | --- |
+| [ADR-001 — Monolito modular Laravel](10-adr/ADR-001-monolito-modular-laravel.md) | Completado | Adoptar un monolito modular Laravel como estilo arquitectónico. |
+| [ADR-002 — Evolución incremental](10-adr/ADR-002-evolucion-incremental.md) | Completado | Evolucionar sin reescritura total mediante cambios graduales. |
+| [ADR-003 — Multi-tenancy con esquema compartido](10-adr/ADR-003-multitenancy-esquema-compartido.md) | Completado | Usar una base de datos y un esquema compartidos con aislamiento contextual. |
+| [ADR-004 — Organización y Copropiedad](10-adr/ADR-004-organizacion-tenant-copropiedad-ambito.md) | Completado | Definir Organización como tenant comercial y Copropiedad como ámbito operativo. |
+| [ADR-005 — Usuario global y membresías](10-adr/ADR-005-usuario-global-membresias.md) | Completado | Mantener una identidad global con participación autorizada por ámbito. |
+| [ADR-006 — Roles, permisos y capacidades](10-adr/ADR-006-roles-permisos-capacidades.md) | Completado | Separar autorización de Usuarios y disponibilidad comercial. |
+| [ADR-007 — Planes mediante capacidades](10-adr/ADR-007-planes-mediante-capacidades.md) | Completado | Desacoplar Básico y Pro mediante capacidades habilitadas. |
+| [ADR-008 — Casos de uso compartidos](10-adr/ADR-008-casos-de-uso-compartidos.md) | Completado | Reutilizar lógica de aplicación entre web, API, jobs y móviles. |
+| [ADR-009 — Gestión Documental antes de IA](10-adr/ADR-009-gestion-documental-antes-de-ia.md) | Completado | Establecer fuentes documentales gobernadas antes de incorporar IA. |
+| [ADR-010 — IA asistiva con RAG](10-adr/ADR-010-ia-rag-revision-humana.md) | Completado | Usar RAG, citas y revisión humana obligatoria. |
 
 ### 11. Glosario
 
@@ -178,6 +188,6 @@ estados de este índice deben actualizarse en el mismo cambio documental.
 
 ## Control documental
 
-- **Versión:** v1.5
+- **Versión:** v1.7
 - **Fecha de creación:** 30 de julio de 2026
 - **Fecha de última actualización:** 31 de julio de 2026
