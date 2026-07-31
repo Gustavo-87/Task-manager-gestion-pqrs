@@ -21,13 +21,58 @@ class AuthenticationTest extends TestCase
     public function test_user_can_login_and_logout(): void
     {
         $user = User::factory()->create(['password' => '12345']);
+        $this->get(route('login'));
+        $sessionId = session()->getId();
 
         $this->post(route('login.store'), ['email' => $user->email, 'password' => '12345'])
             ->assertRedirect(route('pqrs.index'));
         $this->assertAuthenticatedAs($user);
+        $this->assertNotSame($sessionId, session()->getId());
 
         $this->post(route('logout'))->assertRedirect(route('login'));
         $this->assertGuest();
+    }
+
+    public function test_user_can_login_with_an_uppercase_email(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'residente@example.com',
+            'password' => '12345',
+        ]);
+
+        $this->post(route('login.store'), [
+            'email' => 'RESIDENTE@EXAMPLE.COM',
+            'password' => '12345',
+        ])->assertRedirect(route('pqrs.index'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_user_can_login_with_outer_spaces_in_the_email(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'residente@example.com',
+            'password' => '12345',
+        ]);
+
+        $this->post(route('login.store'), [
+            'email' => '  residente@example.com  ',
+            'password' => '12345',
+        ])->assertRedirect(route('pqrs.index'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_user_can_login_with_outer_spaces_in_the_password(): void
+    {
+        $user = User::factory()->create(['password' => ' 12345 ']);
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => ' 12345 ',
+        ])->assertRedirect(route('pqrs.index'));
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_invalid_credentials_are_rejected(): void
