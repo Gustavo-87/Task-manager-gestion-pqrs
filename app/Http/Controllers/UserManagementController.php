@@ -1,10 +1,12 @@
 <?php
 namespace App\Http\Controllers;
+use App\Application\Identidad\SincronizarIdentidadContextualUsuario;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 class UserManagementController extends Controller {
+    public function __construct(private readonly SincronizarIdentidadContextualUsuario $sincronizarIdentidad) {}
     public function index(Request $request): View { abort_unless($request->user()->isAdmin(),403); return view('users.index',['users'=>User::orderBy('name')->paginate(20)]); }
     public function store(Request $request): RedirectResponse {
         abort_unless($request->user()->isAdmin(),403);
@@ -18,7 +20,7 @@ class UserManagementController extends Controller {
         ]);
         $data['email']=strtolower($data['email']);
         $data['email_verified_at']=now();
-        User::create($data);
+        $this->sincronizarIdentidad->crearUsuario($data);
         return redirect()->route('users.index')->with('success','Usuario creado correctamente.');
     }
     public function edit(Request $request,User $user): View { abort_unless($request->user()->isAdmin(),403); return view('users.edit',compact('user')); }
@@ -35,10 +37,10 @@ class UserManagementController extends Controller {
         abort_if($user->is($request->user())&&$data['role']!=='admin',422,'No puedes retirar tu propio rol de administrador.');
         $data['email']=strtolower($data['email']);
         if(blank($data['password']??null)) unset($data['password']);
-        $user->update($data);
+        $this->sincronizarIdentidad->actualizarUsuario($user,$data);
         return redirect()->route('users.index')->with('success','Usuario actualizado correctamente.');
     }
-    public function updateRole(Request $request,User $user): RedirectResponse { abort_unless($request->user()->isAdmin(),403); $data=$request->validate(['role'=>['required','in:admin,gestor,apoyo,auditor,residente']]); abort_if($user->is($request->user())&&$data['role']!=='admin',422,'No puedes retirar tu propio rol de administrador.'); $user->update($data); return back()->with('success','Rol actualizado.'); }
+    public function updateRole(Request $request,User $user): RedirectResponse { abort_unless($request->user()->isAdmin(),403); $data=$request->validate(['role'=>['required','in:admin,gestor,apoyo,auditor,residente']]); abort_if($user->is($request->user())&&$data['role']!=='admin',422,'No puedes retirar tu propio rol de administrador.'); $this->sincronizarIdentidad->actualizarUsuario($user,$data); return back()->with('success','Rol actualizado.'); }
     public function destroy(Request $request,User $user): RedirectResponse {
         abort_unless($request->user()->isAdmin(),403);
         abort_if($user->is($request->user()),422,'No puedes eliminar tu propia cuenta.');

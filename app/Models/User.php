@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -37,4 +38,14 @@ class User extends Authenticatable
    public function canViewAllPqrs(): bool { return in_array($this->role,['admin','gestor','auditor','apoyo'],true); }
    public function canManagePqrs(): bool { return in_array($this->role,['admin','gestor','apoyo'],true); }
    public function isAdmin(): bool { return $this->role === 'admin'; }
+
+    public function membresiasOrganizacion(): HasMany
+    {
+        return $this->hasMany(MembresiaOrganizacion::class, 'usuario_id');
+    }
+
+    public function membresiasCopropiedad(): HasMany
+    {
+        return $this->hasMany(MembresiaCopropiedad::class, 'usuario_id');
+    }
 }

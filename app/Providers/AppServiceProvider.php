@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Application\Contexto\ContextoOperativo;
+use App\Application\Contexto\ContextResolver;
 use App\Models\SiteSetting;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -13,7 +15,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(ContextResolver::class, fn () => new ContextResolver());
+        $this->app->scoped(
+            ContextoOperativo::class,
+            fn ($app) => $app->make(ContextResolver::class)
+                ->resolverParaHttp($app->make('request'))
+        );
     }
 
     /**

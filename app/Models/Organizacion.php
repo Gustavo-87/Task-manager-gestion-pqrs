@@ -35,4 +35,14 @@ class Organizacion extends Model
     {
         return $this->hasOne(ConfiguracionOrganizacion::class);
     }
+
+    public function membresiasOrganizacion(): HasMany
+    {
+        return $this->hasMany(MembresiaOrganizacion::class);
+    }
+
+    public function membresiasCopropiedad(): HasMany
+    {
+        return $this->hasMany(MembresiaCopropiedad::class);
+    }
 }

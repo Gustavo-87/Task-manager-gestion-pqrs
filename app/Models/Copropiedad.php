@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Copropiedad extends Model
 {
@@ -38,5 +39,10 @@ class Copropiedad extends Model
     public function configuracion(): HasOne
     {
         return $this->hasOne(ConfiguracionCopropiedad::class);
+    }
+
+    public function membresiasCopropiedad(): HasMany
+    {
+        return $this->hasMany(MembresiaCopropiedad::class);
     }
 }
