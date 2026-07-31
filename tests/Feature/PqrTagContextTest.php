@@ -1,0 +1,121 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Copropiedad;
+use App\Models\Organizacion;
+use App\Models\Pqr;
+use App\Models\PqrTag;
+use App\Models\User;
+use Illuminate\Database\QueryException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\Concerns\CreatesInstitutionalContext;
+use Tests\TestCase;
+
+class PqrTagContextTest extends TestCase
+{
+    use CreatesInstitutionalContext, RefreshDatabase;
+
+    public function test_tags_belong_to_a_valid_institutional_context_and_pqrs(): void
+    {
+        [$organizacion, $copropiedad] = $this->createInstitutionalContext();
+        $pqr = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
+        $tag = PqrTag::factory()->paraContexto($organizacion, $copropiedad)->create();
+
+        $pqr->tags()->syncWithPivotValues([$tag->id], [
+            'organizacion_id' => $organizacion->id,
+            'copropiedad_id' => $copropiedad->id,
+        ]);
+
+        $this->assertTrue($tag->organizacion->is($organizacion));
+        $this->assertTrue($tag->copropiedad->is($copropiedad));
+        $this->assertTrue($pqr->tags->first()->is($tag));
+        $this->assertTrue($tag->pqrs->first()->is($pqr));
+    }
+
+    public function test_same_name_is_allowed_in_different_copropiedades_but_not_in_the_same_one(): void
+    {
+        [$organizacion, $copropiedad] = $this->createInstitutionalContext();
+        $otraOrganizacion = Organizacion::create(['nombre' => 'Otra organización', 'estado' => 'activa']);
+        $otraCopropiedad = Copropiedad::create([
+            'organizacion_id' => $otraOrganizacion->id,
+            'nombre' => 'Otra copropiedad',
+            'estado' => 'activa',
+        ]);
+
+        PqrTag::factory()->paraContexto($organizacion, $copropiedad)->create(['name' => 'Urgente']);
+        PqrTag::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create(['name' => 'Urgente']);
+        $this->assertDatabaseCount('pqr_tags', 2);
+
+        $this->expectException(QueryException::class);
+        PqrTag::factory()->paraContexto($organizacion, $copropiedad)->create(['name' => 'Urgente']);
+    }
+
+    public function test_tools_and_pqr_show_only_expose_tags_from_active_context(): void
+    {
+        [$organizacion, $copropiedad] = $this->createInstitutionalContext();
+        $otraOrganizacion = Organizacion::create(['nombre' => 'Otra organización', 'estado' => 'activa']);
+        $otraCopropiedad = Copropiedad::create([
+            'organizacion_id' => $otraOrganizacion->id,
+            'nombre' => 'Otra copropiedad',
+            'estado' => 'activa',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $pqr = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
+        PqrTag::factory()->paraContexto($organizacion, $copropiedad)->create(['name' => 'Etiqueta local']);
+        PqrTag::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create(['name' => 'Etiqueta externa']);
+
+        $this->actingAs($admin)->get(route('management.tools'))
+            ->assertOk()
+            ->assertSee('Etiqueta local')
+            ->assertDontSee('Etiqueta externa');
+        $this->get(route('pqrs.show', $pqr))
+            ->assertOk()
+            ->assertSee('Etiqueta local')
+            ->assertDontSee('Etiqueta externa');
+    }
+
+    public function test_external_and_unknown_tags_are_rejected_equally_when_syncing(): void
+    {
+        [$organizacion, $copropiedad] = $this->createInstitutionalContext();
+        $otraOrganizacion = Organizacion::create(['nombre' => 'Otra organización', 'estado' => 'activa']);
+        $otraCopropiedad = Copropiedad::create([
+            'organizacion_id' => $otraOrganizacion->id,
+            'nombre' => 'Otra copropiedad',
+            'estado' => 'activa',
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $pqr = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
+        $externa = PqrTag::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create();
+
+        $this->actingAs($admin)->patch(route('pqrs.tags.sync', $pqr), ['tags' => [$externa->id]])
+            ->assertRedirect()
+            ->assertSessionHasErrors('tags.0');
+        $this->patch(route('pqrs.tags.sync', $pqr), ['tags' => [999999]])
+            ->assertRedirect()
+            ->assertSessionHasErrors('tags.0');
+        $this->assertDatabaseCount('pqr_pqr_tag', 0);
+    }
+
+    public function test_composite_foreign_keys_reject_a_cross_context_association(): void
+    {
+        [$organizacion, $copropiedad] = $this->createInstitutionalContext();
+        $otraOrganizacion = Organizacion::create(['nombre' => 'Otra organización', 'estado' => 'activa']);
+        $otraCopropiedad = Copropiedad::create([
+            'organizacion_id' => $otraOrganizacion->id,
+            'nombre' => 'Otra copropiedad',
+            'estado' => 'activa',
+        ]);
+        $pqr = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
+        $tag = PqrTag::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create();
+
+        $this->expectException(QueryException::class);
+        DB::table('pqr_pqr_tag')->insert([
+            'pqr_id' => $pqr->id,
+            'pqr_tag_id' => $tag->id,
+            'organizacion_id' => $organizacion->id,
+            'copropiedad_id' => $copropiedad->id,
+        ]);
+    }
+}

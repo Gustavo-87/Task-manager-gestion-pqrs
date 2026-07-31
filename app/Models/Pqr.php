@@ -54,7 +54,15 @@ class Pqr extends Model
     public function activities() { return $this->hasMany(PqrActivity::class)->latest(); }
     public function replies() { return $this->hasMany(PqrReply::class)->latest(); }
     public function internalComments() { return $this->hasMany(PqrInternalComment::class)->latest(); }
-    public function tags() { return $this->belongsToMany(PqrTag::class); }
+    public function tags()
+    {
+        return $this->belongsToMany(PqrTag::class)
+            ->withPivot(['organizacion_id', 'copropiedad_id'])
+            ->where('pqr_tags.organizacion_id', $this->organizacion_id)
+            ->where('pqr_tags.copropiedad_id', $this->copropiedad_id)
+            ->wherePivot('organizacion_id', $this->organizacion_id)
+            ->wherePivot('copropiedad_id', $this->copropiedad_id);
+    }
     public function satisfactionSurvey() { return $this->hasOne(SatisfactionSurvey::class); }
 
     public function attachments()

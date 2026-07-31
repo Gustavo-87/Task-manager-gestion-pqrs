@@ -125,12 +125,17 @@ class PqrController extends Controller
         return redirect()->route('pqrs.show', $pqr)->with('success', 'PQR radicada correctamente. Ya no puede ser modificada.');
     }
 
-    public function show(Pqr $pqr)
+    public function show(Pqr $pqr, ContextoOperativo $contexto)
     {
         $this->authorize('view', $pqr);
         $pqr->load(['user', 'tipoPqr', 'attachments', 'assignee', 'activities.user', 'replies.user', 'internalComments.user', 'tags', 'satisfactionSurvey']);
         $templates = request()->user()->canManagePqrs() ? ResponseTemplate::orderBy('name')->get() : collect();
-        $availableTags = request()->user()->canManagePqrs() ? PqrTag::orderBy('name')->get() : collect();
+        $availableTags = request()->user()->canManagePqrs()
+            ? PqrTag::where('organizacion_id', $contexto->organizacion->id)
+                ->where('copropiedad_id', $contexto->copropiedad->id)
+                ->orderBy('name')
+                ->get()
+            : collect();
 
         return view('pqrs.show', compact('pqr', 'templates', 'availableTags'));
     }
