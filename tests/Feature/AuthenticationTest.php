@@ -84,6 +84,77 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_allows_attempts_within_the_limit_and_then_returns_429(): void
+    {
+        $credentials = ['email' => 'limit@example.com', 'password' => 'incorrecta'];
+
+        foreach (range(1, 5) as $attempt) {
+            $this->post(route('login.store'), $credentials)
+                ->assertRedirect()
+                ->assertSessionHasErrors('email');
+        }
+
+        $this->post(route('login.store'), $credentials)
+            ->assertTooManyRequests()
+            ->assertHeader('Retry-After');
+    }
+
+    public function test_login_limit_is_isolated_by_normalized_email_and_ip(): void
+    {
+        foreach (range(1, 5) as $attempt) {
+            $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])
+                ->post(route('login.store'), [
+                    'email' => '  LIMIT@EXAMPLE.COM ',
+                    'password' => 'incorrecta',
+                ]);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])
+            ->post(route('login.store'), [
+                'email' => 'otro@example.com',
+                'password' => 'incorrecta',
+            ])->assertRedirect();
+
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.11'])
+            ->post(route('login.store'), [
+                'email' => 'limit@example.com',
+                'password' => 'incorrecta',
+            ])->assertRedirect();
+    }
+
+    public function test_successful_login_clears_previous_failed_attempts(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'limpieza@example.com',
+            'password' => 'clave-correcta',
+        ]);
+
+        foreach (range(1, 4) as $attempt) {
+            $this->post(route('login.store'), [
+                'email' => $user->email,
+                'password' => 'incorrecta',
+            ]);
+        }
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'clave-correcta',
+        ])->assertRedirect(route('pqrs.index'));
+        $this->post(route('logout'));
+
+        foreach (range(1, 5) as $attempt) {
+            $this->post(route('login.store'), [
+                'email' => $user->email,
+                'password' => 'incorrecta',
+            ])->assertRedirect();
+        }
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'incorrecta',
+        ])->assertTooManyRequests();
+    }
+
     public function test_user_can_request_a_password_reset_link(): void
     {
         Notification::fake();

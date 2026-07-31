@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class PqrReplyController extends Controller {
     public function store(Request $request, Pqr $pqr): RedirectResponse
     {
-        abort_unless($request->user()->canManagePqrs(), 403);
+        $this->authorize('update', $pqr);
         $data = $request->validate(['body' => ['required', 'string', 'max:10000'], 'action' => ['required', 'in:draft,send'], 'attachments' => ['nullable', 'array', 'max:5'], 'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,txt,csv,zip']]);
         $files = collect($request->file('attachments', []))->map(function ($file) use ($pqr) { return ['name' => $file->getClientOriginalName(), 'path' => $file->store("pqrs/{$pqr->id}/replies"), 'size' => $file->getSize()]; })->all();
         $draft = $data['action'] === 'draft';

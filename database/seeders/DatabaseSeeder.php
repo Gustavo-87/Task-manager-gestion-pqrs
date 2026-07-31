@@ -7,11 +7,26 @@ use App\Models\TipoPqr;
 use App\Models\Pqr;
 use App\Models\SiteSetting;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new RuntimeException(
+                'Los usuarios de demostración no pueden crearse en el entorno production.'
+            );
+        }
+
+        $demoPassword = config('resuelve.demo_password');
+
+        if (! is_string($demoPassword) || strlen($demoPassword) < 12) {
+            throw new RuntimeException(
+                'Define RESUELVE_DEMO_PASSWORD con al menos 12 caracteres antes de ejecutar el seeder.'
+            );
+        }
+
         SiteSetting::firstOrCreate([], SiteSetting::defaults());
 
         $user = User::updateOrCreate([
@@ -20,7 +35,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Gestión PQRS',
             'role' => 'admin',
             'email_verified_at' => now(),
-            'password' => '12345',
+            'password' => $demoPassword,
         ]);
 
         $resident = User::updateOrCreate([
@@ -31,16 +46,16 @@ class DatabaseSeeder extends Seeder
             'tower' => 'B',
             'unit' => '204',
             'email_verified_at' => now(),
-            'password' => '12345',
+            'password' => $demoPassword,
         ]);
 
         $residentTwo = User::updateOrCreate(['email' => 'carlos.mejia@example.com'], [
             'name' => 'Carlos Mejía', 'role' => 'residente', 'tower' => 'A', 'unit' => '105',
-            'email_verified_at' => now(), 'password' => '12345',
+            'email_verified_at' => now(), 'password' => $demoPassword,
         ]);
         $residentThree = User::updateOrCreate(['email' => 'andrea.ruiz@example.com'], [
             'name' => 'Andrea Ruiz', 'role' => 'residente', 'tower' => 'C', 'unit' => '302',
-            'email_verified_at' => now(), 'password' => '12345',
+            'email_verified_at' => now(), 'password' => $demoPassword,
         ]);
 
         $tipos = collect([

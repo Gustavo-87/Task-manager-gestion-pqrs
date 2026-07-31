@@ -3,16 +3,22 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    private const MAX_LOGIN_ATTEMPTS = 5;
+
+    private const LOGIN_DECAY_SECONDS = 60;
+
     public function create(): View
     {
         return view('auth.login');
@@ -29,15 +35,39 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $rateLimitKey = $this->loginRateLimitKey($credentials['email'], $request->ip());
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::MAX_LOGIN_ATTEMPTS)) {
+            $retryAfter = RateLimiter::availableIn($rateLimitKey);
+
+            throw new ThrottleRequestsException(
+                'Demasiados intentos de inicio de sesión. Inténtalo nuevamente más tarde.',
+                null,
+                [
+                    'Retry-After' => $retryAfter,
+                    'X-RateLimit-Limit' => self::MAX_LOGIN_ATTEMPTS,
+                    'X-RateLimit-Remaining' => 0,
+                ]
+            );
+        }
+
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            RateLimiter::hit($rateLimitKey, self::LOGIN_DECAY_SECONDS);
+
             return back()
                 ->withErrors(['email' => 'El correo o la contraseña no son correctos.'])
                 ->onlyInput('email');
         }
 
+        RateLimiter::clear($rateLimitKey);
         $request->session()->regenerate();
 
         return redirect()->intended(route('pqrs.index'));
+    }
+
+    private function loginRateLimitKey(string $email, string $ip): string
+    {
+        return 'login:'.sha1($email.'|'.$ip);
     }
 
     public function destroy(Request $request): RedirectResponse
