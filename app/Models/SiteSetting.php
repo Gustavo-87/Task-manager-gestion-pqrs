@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
 
 class SiteSetting extends Model
@@ -12,6 +13,16 @@ class SiteSetting extends Model
     protected function casts(): array
     {
         return ['dias_respuesta' => 'integer'];
+    }
+
+    public function organizacion(): BelongsTo
+    {
+        return $this->belongsTo(Organizacion::class);
+    }
+
+    public function copropiedad(): BelongsTo
+    {
+        return $this->belongsTo(Copropiedad::class);
     }
 
     public static function current(): self

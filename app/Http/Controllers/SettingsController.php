@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Configuracion\ActualizarConfiguracionCopropiedadInicial;
 use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+use RuntimeException;
 
 class SettingsController extends Controller
 {
+    public function __construct(
+        private readonly ActualizarConfiguracionCopropiedadInicial $actualizarConfiguracion
+    ) {}
+
     public function edit(Request $request): View
     {
         abort_unless(in_array($request->user()->role, ['admin','gestor'], true), 403);
@@ -34,13 +40,27 @@ class SettingsController extends Controller
         ]);
         $settings = SiteSetting::first() ?? new SiteSetting();
         unset($data['logo']);
+        $newLogoPath = null;
+        $previousLogoPath = $settings->logo_path;
+
         if ($request->hasFile('logo')) {
-            if ($settings->logo_path) {
-                Storage::disk('public')->delete($settings->logo_path);
-            }
-            $data['logo_path'] = $request->file('logo')->store('branding', 'public');
+            $newLogoPath = $request->file('logo')->store('branding', 'public');
+            $data['logo_path'] = $newLogoPath;
         }
-        $settings->fill($data)->save();
+
+        try {
+            $this->actualizarConfiguracion->execute($settings, $data);
+        } catch (RuntimeException $exception) {
+            if ($newLogoPath) {
+                Storage::disk('public')->delete($newLogoPath);
+            }
+
+            return back()->withErrors(['contexto' => $exception->getMessage()])->withInput();
+        }
+
+        if ($newLogoPath && $previousLogoPath) {
+            Storage::disk('public')->delete($previousLogoPath);
+        }
 
         return back()->with('success', 'La configuración del conjunto fue actualizada.');
     }
