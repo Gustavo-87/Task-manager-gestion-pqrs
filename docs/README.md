@@ -69,7 +69,9 @@ Los estados utilizados en este índice son:
 | Documento | Estado | Propósito |
 | --- | --- | --- |
 | [Modelo de dominio](03-tecnica/modelo-de-dominio.md) | Completado | Describir entidades, relaciones y cardinalidades. |
+| [Modelo del dominio futuro](03-tecnica/modelo-del-dominio-futuro.md) | Completado | Definir las entidades y agregados conceptuales de la arquitectura objetivo. |
 | [Modelo de datos](03-tecnica/modelo-de-datos.md) | Completado | Documentar tablas, columnas, claves y reglas de integridad. |
+| [Modelo de datos futuro](03-tecnica/modelo-de-datos-futuro.md) | Completado | Definir el esquema relacional objetivo del núcleo multi-copropiedad. |
 | [Rutas web](03-tecnica/rutas-web.md) | Pendiente | Inventariar métodos HTTP, URI, controladores y autorización. |
 | [Notificaciones y automatizaciones](03-tecnica/notificaciones-y-automatizaciones.md) | Pendiente | Describir eventos, destinatarios, canales y tareas programadas. |
 | [Archivos y almacenamiento](03-tecnica/archivos-y-almacenamiento.md) | Pendiente | Registrar discos, adjuntos, límites, acceso y eliminación. |
@@ -188,6 +190,6 @@ estados de este índice deben actualizarse en el mismo cambio documental.
 
 ## Control documental
 
-- **Versión:** v1.7
+- **Versión:** v1.9
 - **Fecha de creación:** 30 de julio de 2026
 - **Fecha de última actualización:** 31 de julio de 2026
