@@ -49,19 +49,21 @@ class AuthenticatedSessionController extends Controller
             );
         }
 
-        $otp = $user->generateOtp();
+        if (!filled(config('auth.fixed_otp_code'))) {
+            $otp = $user->generateOtp();
 
-        Mail::send(
-            'emails.otp',
-            [
-                'otp' => $otp,
-                'user' => $user,
-            ],
-            function ($message) use ($user) {
-                $message->to($user->email)
-                    ->subject('Código de verificación');
-            }
-        );
+            Mail::send(
+                'emails.otp',
+                [
+                    'otp' => $otp,
+                    'user' => $user,
+                ],
+                function ($message) use ($user) {
+                    $message->to($user->email)
+                        ->subject('Código de verificación');
+                }
+            );
+        }
 
         Auth::guard('web')->logout();
 

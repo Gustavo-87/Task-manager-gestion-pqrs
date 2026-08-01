@@ -33,6 +33,7 @@ class OtpVerificationController extends Controller
 
         return view('auth.otp-verify', [
             'email' => $user->email,
+            'usesFixedOtp' => filled(config('auth.fixed_otp_code')),
         ]);
     }
 
@@ -42,8 +43,7 @@ class OtpVerificationController extends Controller
             'code' => [
                 'required',
                 'string',
-                'size:6',
-                'regex:/^[0-9]{6}$/',
+                'regex:/^[0-9]{5,6}$/',
             ],
         ]);
 
@@ -59,7 +59,11 @@ class OtpVerificationController extends Controller
             return redirect()->route('login');
         }
 
-        if (!$user->verifyOtp($validated['code'])) {
+        $fixedOtpCode = config('auth.fixed_otp_code');
+        $usesFixedOtp = filled($fixedOtpCode)
+            && hash_equals((string) $fixedOtpCode, $validated['code']);
+
+        if (!$usesFixedOtp && !$user->verifyOtp($validated['code'])) {
             return back()
                 ->withErrors([
                     'code' => 'El código ingresado no es válido o ha expirado.',

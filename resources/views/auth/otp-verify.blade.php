@@ -5,16 +5,24 @@
         </h1>
 
         <p class="mt-2 text-sm text-gray-600">
-            Enviamos un código de 6 dígitos al correo:
+            @if ($usesFixedOtp)
+                Ingresa el código de acceso de demostración.
+            @else
+                Enviamos un código de 6 dígitos al correo:
+            @endif
         </p>
 
-        <p class="mt-1 text-sm font-semibold text-gray-800">
-            {{ $email }}
-        </p>
+        @unless ($usesFixedOtp)
+            <p class="mt-1 text-sm font-semibold text-gray-800">
+                {{ $email }}
+            </p>
+        @endunless
 
-        <p class="mt-2 text-sm text-gray-600">
-            El código será válido durante 5 minutos.
-        </p>
+        @unless ($usesFixedOtp)
+            <p class="mt-2 text-sm text-gray-600">
+                El código será válido durante 5 minutos.
+            </p>
+        @endunless
     </div>
 
     @if (session('status'))
@@ -43,7 +51,7 @@
                 inputmode="numeric"
                 autocomplete="one-time-code"
                 maxlength="6"
-                pattern="[0-9]{6}"
+                pattern="[0-9]{5,6}"
             />
 
             <x-input-error
@@ -59,20 +67,22 @@
         </div>
     </form>
 
-    <form
-        method="POST"
-        action="{{ route('otp.resend') }}"
-        class="mt-4 text-center"
-    >
-        @csrf
-
-        <button
-            type="submit"
-            class="text-sm font-medium text-gray-600 underline hover:text-gray-900"
+    @unless ($usesFixedOtp)
+        <form
+            method="POST"
+            action="{{ route('otp.resend') }}"
+            class="mt-4 text-center"
         >
-            Reenviar código
-        </button>
-    </form>
+            @csrf
+
+            <button
+                type="submit"
+                class="text-sm font-medium text-gray-600 underline hover:text-gray-900"
+            >
+                Reenviar código
+            </button>
+        </form>
+    @endunless
 
     <div class="mt-4 text-center">
         <a

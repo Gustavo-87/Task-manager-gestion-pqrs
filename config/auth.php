@@ -134,4 +134,16 @@ return [
 
     'otp_bypass_resident' => env('AUTH_OTP_BYPASS_RESIDENT', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | OTP fijo para demostración
+    |--------------------------------------------------------------------------
+    |
+    | Si se define, este código permite completar el segundo factor sin enviar
+    | correo. Debe configurarse exclusivamente como variable de entorno.
+    |
+    */
+
+    'fixed_otp_code' => env('AUTH_FIXED_OTP_CODE'),
+
 ];
