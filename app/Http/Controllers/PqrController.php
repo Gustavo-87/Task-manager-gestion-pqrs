@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Application\Contexto\ContextoOperativo;
+use App\Application\Autorizacion\AutorizacionContextual;
 use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\Pqr;
 use App\Models\TipoPqr;
@@ -26,7 +27,7 @@ class PqrController extends Controller
         $this->authorize('viewAny', Pqr::class);
 
         $baseQuery = $consultaPqrs->para($contexto);
-        if (! $request->user()->canViewAllPqrs()) {
+        if (! app(AutorizacionContextual::class)->tienePermiso($contexto, 'pqrs.ver_todas')) {
             $baseQuery->where('user_id', $request->user()->id);
         }
 
@@ -73,7 +74,7 @@ class PqrController extends Controller
         ];
 
         $tipos = TipoPqr::orderBy('nombre')->get();
-        $gestores = User::whereIn('role', ['admin','gestor','apoyo'])->orderBy('name')->get();
+        $gestores = User::query()->whereHas('membresiasCopropiedad', fn ($query) => $query->where('organizacion_id', $contexto->organizacion->id)->where('copropiedad_id', $contexto->copropiedad->id)->where('estado', 'activa'))->orderBy('name')->get();
         return view('pqrs.index', compact('pqrs', 'resumen', 'chartData', 'tipos', 'gestores'));
     }
 
@@ -120,7 +121,7 @@ class PqrController extends Controller
 
             return $pqr;
         });
-        User::whereIn('role', ['admin','gestor'])->get()->each->notify(new PqrEventNotification($pqr, 'Nueva solicitud radicada', "Se creó la PQR-".str_pad($pqr->id, 4, '0', STR_PAD_LEFT).": {$pqr->asunto}"));
+        User::query()->whereHas('membresiasCopropiedad', fn ($query) => $query->where('organizacion_id', $contexto->organizacion->id)->where('copropiedad_id', $contexto->copropiedad->id)->where('estado', 'activa'))->get()->filter(fn (User $usuario) => app(AutorizacionContextual::class)->tienePermiso(app(\App\Application\Contexto\ContextResolver::class)->resolverExplicito($contexto->organizacion->id, $contexto->copropiedad->id, $usuario->id), 'pqrs.gestionar'))->each->notify(new PqrEventNotification($pqr, 'Nueva solicitud radicada', "Se creó la PQR-".str_pad($pqr->id, 4, '0', STR_PAD_LEFT).": {$pqr->asunto}"));
 
         return redirect()->route('pqrs.show', $pqr)->with('success', 'PQR radicada correctamente. Ya no puede ser modificada.');
     }
@@ -129,8 +130,8 @@ class PqrController extends Controller
     {
         $this->authorize('view', $pqr);
         $pqr->load(['user', 'tipoPqr', 'attachments', 'assignee', 'activities.user', 'replies.user', 'internalComments.user', 'tags', 'satisfactionSurvey']);
-        $templates = request()->user()->canManagePqrs() ? ResponseTemplate::orderBy('name')->get() : collect();
-        $availableTags = request()->user()->canManagePqrs()
+        $templates = app(AutorizacionContextual::class)->tienePermiso($contexto, 'pqrs.gestionar') ? ResponseTemplate::orderBy('name')->get() : collect();
+        $availableTags = app(AutorizacionContextual::class)->tienePermiso($contexto, 'pqrs.gestionar')
             ? PqrTag::where('organizacion_id', $contexto->organizacion->id)
                 ->where('copropiedad_id', $contexto->copropiedad->id)
                 ->orderBy('name')
@@ -140,11 +141,11 @@ class PqrController extends Controller
         return view('pqrs.show', compact('pqr', 'templates', 'availableTags'));
     }
 
-    public function edit(Pqr $pqr)
+    public function edit(Pqr $pqr, ContextoOperativo $contexto)
     {
         $this->authorize('update', $pqr);
         $tipos = TipoPqr::orderBy('nombre')->get();
-        $gestores = User::whereIn('role', ['admin','gestor','apoyo'])->orderBy('name')->get();
+        $gestores = User::query()->whereHas('membresiasCopropiedad', fn ($query) => $query->where('organizacion_id', $contexto->organizacion->id)->where('copropiedad_id', $contexto->copropiedad->id)->where('estado', 'activa'))->orderBy('name')->get();
 
         return view('pqrs.edit', compact('pqr', 'tipos', 'gestores'));
     }

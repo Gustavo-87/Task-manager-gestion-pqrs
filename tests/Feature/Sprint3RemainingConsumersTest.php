@@ -25,6 +25,11 @@ class Sprint3RemainingConsumersTest extends TestCase
         [$organizacion, $copropiedad] = $this->createInstitutionalContext();
         [$otraOrganizacion, $otraCopropiedad] = $this->createOtherContext();
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', [
+            'pqrs.listar',
+            'pqrs.ver_todas',
+            'informes.exportar',
+        ]);
         Pqr::factory()->paraContexto($organizacion, $copropiedad)->create([
             'asunto' => 'VISIBLE-EN-INFORME',
         ]);
@@ -67,6 +72,7 @@ class Sprint3RemainingConsumersTest extends TestCase
         [$organizacion, $copropiedad] = $this->createInstitutionalContext();
         [$otraOrganizacion, $otraCopropiedad] = $this->createOtherContext();
         $manager = User::factory()->create(['role' => 'gestor']);
+        $this->createContextualIdentity($manager, $organizacion, $copropiedad, 'gestor', ['gestion.carga_ver']);
         Pqr::factory()->paraContexto($organizacion, $copropiedad)->create([
             'assigned_to_id' => $manager->id,
             'estado' => 'radicada',

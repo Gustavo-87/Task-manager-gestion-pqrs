@@ -13,10 +13,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
+use Tests\Concerns\CreatesInstitutionalContext;
 
 class PqrContextRelationshipsTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreatesInstitutionalContext, RefreshDatabase;
 
     public function test_pqr_belongs_to_organizacion_and_copropiedad_with_inverse_relations(): void
     {
@@ -39,6 +40,7 @@ class PqrContextRelationshipsTest extends TestCase
             'estado' => 'activa',
         ]);
         $usuario = User::factory()->create(['role' => 'residente']);
+        $this->createContextualIdentity($usuario, $organizacion, $copropiedad, 'residente', ['pqrs.crear']);
         $tipo = TipoPqr::factory()->create();
 
         $this->actingAs($usuario)->post(route('pqrs.store'), [

@@ -8,25 +8,36 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\CreatesInstitutionalContext;
 use Tests\TestCase;
 
 class SettingsTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreatesInstitutionalContext, RefreshDatabase;
 
     public function test_only_manager_can_open_settings(): void
     {
+        [$organizacion, $copropiedad] = $this->createInstitutionalContext();
         $resident = User::factory()->create(['role' => 'residente']);
         $manager = User::factory()->create(['role' => 'gestor']);
+        $this->createContextualIdentity($resident, $organizacion, $copropiedad, 'residente', []);
+        $this->createContextualIdentity($manager, $organizacion, $copropiedad, 'gestor', ['configuracion.gestionar']);
 
-        $this->actingAs($resident)->get(route('settings.edit'))->assertForbidden();
-        $this->actingAs($manager)->get(route('settings.edit'))->assertOk();
+        $this->actingAsContextual($resident)->get(route('settings.edit'))->assertForbidden();
+        $this->actingAsContextual($manager)->get(route('settings.edit'))->assertOk();
     }
 
     public function test_manager_can_update_residential_property_identity(): void
     {
         $manager = User::factory()->create(['role' => 'gestor']);
-        $this->createInitialContext();
+        $settings = $this->createInitialContext();
+        $this->createContextualIdentity(
+            $manager,
+            $settings->organizacion,
+            $settings->copropiedad,
+            'gestor',
+            ['configuracion.gestionar'],
+        );
 
         $this->actingAs($manager)->put(route('settings.update'), [
             'nombre_conjunto' => 'Conjunto Los Robles',
@@ -52,7 +63,14 @@ class SettingsTest extends TestCase
         Storage::fake('public');
         $manager = User::factory()->create(['role' => 'gestor']);
         Storage::disk('public')->put('branding/anterior.png', 'logo anterior');
-        $this->createInitialContext(['logo_path' => 'branding/anterior.png']);
+        $settings = $this->createInitialContext(['logo_path' => 'branding/anterior.png']);
+        $this->createContextualIdentity(
+            $manager,
+            $settings->organizacion,
+            $settings->copropiedad,
+            'gestor',
+            ['configuracion.gestionar'],
+        );
 
         $this->actingAs($manager)->put(route('settings.update'), [
             'nombre_conjunto' => 'Conjunto Los Robles',

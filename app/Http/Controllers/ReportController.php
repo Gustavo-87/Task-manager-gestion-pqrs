@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Application\Contexto\ContextoOperativo;
+use App\Application\Autorizacion\AutorizacionContextual;
 use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\Pqr;
 use App\Models\SiteSetting;
@@ -29,8 +30,9 @@ class ReportController extends Controller
     ): Collection
     {
         $this->authorize('viewAny', Pqr::class);
+        abort_unless(app(AutorizacionContextual::class)->tienePermiso($contexto, 'informes.exportar'), 403);
         $query = $consultaPqrs->para($contexto)->with(['user', 'tipoPqr', 'assignee']);
-        if (! $request->user()->canViewAllPqrs()) $query->where('user_id', $request->user()->id);
+        if (! app(AutorizacionContextual::class)->tienePermiso($contexto, 'pqrs.ver_todas')) $query->where('user_id', $request->user()->id);
         if ($request->filled('estado') && ! in_array($request->estado, ['pendientes', 'por_vencer'])) $query->where('estado', $request->estado);
         if ($request->estado === 'pendientes') $query->whereIn('estado', ['radicada', 'en_revision']);
         if ($request->estado === 'por_vencer') $query->whereIn('estado', ['radicada', 'en_revision'])->whereBetween('fecha_limite_respuesta', [today(), today()->addDays(3)]);

@@ -1,15 +1,21 @@
 <?php
 namespace App\Http\Controllers;
 use App\Application\Identidad\SincronizarIdentidadContextualUsuario;
+use App\Application\Autorizacion\AutorizacionContextual;
+use App\Application\Contexto\ContextResolver;
+use App\Application\Contexto\ContextoOperativo;
+use App\Models\MembresiaCopropiedad;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 class UserManagementController extends Controller {
     public function __construct(private readonly SincronizarIdentidadContextualUsuario $sincronizarIdentidad) {}
-    public function index(Request $request): View { abort_unless($request->user()->isAdmin(),403); return view('users.index',['users'=>User::orderBy('name')->paginate(20)]); }
+    private function autorizar(): void { abort_unless(app(AutorizacionContextual::class)->tienePermiso(app(ContextoOperativo::class), 'usuarios.gestionar'), 403); }
+    public function index(Request $request): View { $this->autorizar(); return view('users.index',['users'=>User::orderBy('name')->paginate(20)]); }
     public function store(Request $request): RedirectResponse {
-        abort_unless($request->user()->isAdmin(),403);
+        $this->autorizar();
         $data=$request->validate([
             'name'=>['required','string','max:150'],
             'email'=>['required','email','max:150','unique:users,email'],
@@ -23,9 +29,9 @@ class UserManagementController extends Controller {
         $this->sincronizarIdentidad->crearUsuario($data);
         return redirect()->route('users.index')->with('success','Usuario creado correctamente.');
     }
-    public function edit(Request $request,User $user): View { abort_unless($request->user()->isAdmin(),403); return view('users.edit',compact('user')); }
+    public function edit(Request $request,User $user): View { $this->autorizar(); return view('users.edit',compact('user')); }
     public function update(Request $request,User $user): RedirectResponse {
-        abort_unless($request->user()->isAdmin(),403);
+        $this->autorizar();
         $data=$request->validate([
             'name'=>['required','string','max:150'],
             'email'=>['required','email','max:150','unique:users,email,'.$user->id],
@@ -40,13 +46,50 @@ class UserManagementController extends Controller {
         $this->sincronizarIdentidad->actualizarUsuario($user,$data);
         return redirect()->route('users.index')->with('success','Usuario actualizado correctamente.');
     }
-    public function updateRole(Request $request,User $user): RedirectResponse { abort_unless($request->user()->isAdmin(),403); $data=$request->validate(['role'=>['required','in:admin,gestor,apoyo,auditor,residente']]); abort_if($user->is($request->user())&&$data['role']!=='admin',422,'No puedes retirar tu propio rol de administrador.'); $this->sincronizarIdentidad->actualizarUsuario($user,$data); return back()->with('success','Rol actualizado.'); }
+    public function updateRole(Request $request,User $user): RedirectResponse { $this->autorizar(); $data=$request->validate(['role'=>['required','in:admin,gestor,apoyo,auditor,residente']]); abort_if($user->is($request->user())&&$data['role']!=='admin',422,'No puedes retirar tu propio rol de administrador.'); $this->sincronizarIdentidad->actualizarUsuario($user,$data); return back()->with('success','Rol actualizado.'); }
     public function destroy(Request $request,User $user): RedirectResponse {
-        abort_unless($request->user()->isAdmin(),403);
+        $this->autorizar();
         abort_if($user->is($request->user()),422,'No puedes eliminar tu propia cuenta.');
-        abort_if($user->role==='admin'&&User::where('role','admin')->count()<=1,422,'Debe existir al menos un administrador.');
+        $contexto = app(ContextoOperativo::class);
+        $resolver = app(ContextResolver::class);
+        $autorizacion = app(AutorizacionContextual::class);
+        $contextoObjetivo = $resolver->resolverExplicito(
+            $contexto->organizacion->id,
+            $contexto->copropiedad->id,
+            $user->id,
+        );
+        abort_unless($contextoObjetivo->tieneMembresiaContextual(), 404);
+
+        if ($autorizacion->tieneRol($contextoObjetivo, 'admin')) {
+            $administradores = MembresiaCopropiedad::query()
+                ->where('organizacion_id', $contexto->organizacion->id)
+                ->where('copropiedad_id', $contexto->copropiedad->id)
+                ->where('estado', 'activa')
+                ->where('vigente_desde', '<=', now())
+                ->where(fn ($query) => $query
+                    ->whereNull('vigente_hasta')
+                    ->orWhere('vigente_hasta', '>', now()))
+                ->get()
+                ->filter(fn (MembresiaCopropiedad $membresia) => $autorizacion->tieneRol(
+                    $resolver->resolverExplicito(
+                        $contexto->organizacion->id,
+                        $contexto->copropiedad->id,
+                        $membresia->usuario_id,
+                    ),
+                    'admin',
+                ))
+                ->count();
+            abort_if($administradores <= 1,422,'Debe existir al menos un administrador.');
+        }
+
         abort_if($user->pqrs()->exists(),422,'No se puede eliminar porque tiene PQRS asociadas. Puedes cambiar su rol para conservar el historial.');
-        $user->delete();
+        DB::transaction(function () use ($contextoObjetivo, $user): void {
+            DB::table('membresia_copropiedad_rol')
+                ->where('membresia_copropiedad_id', $contextoObjetivo->membresiaCopropiedad->id)
+                ->delete();
+            $contextoObjetivo->membresiaCopropiedad->delete();
+            $user->delete();
+        });
         return redirect()->route('users.index')->with('success','Usuario eliminado correctamente.');
     }
 }

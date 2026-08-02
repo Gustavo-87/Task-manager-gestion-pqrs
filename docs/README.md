@@ -89,6 +89,7 @@ Los estados utilizados en este índice son:
 | [Sprint 2 — Identidad, Membresías y Contexto Operativo](04-desarrollo-agil/sprint-2-identidad-membresias-contexto.md) | Completado | Registrar la identidad contextual, su equivalencia comprobada y la sincronización con `users.role` sin activarla como fuente de autorización. |
 | [Sprint 3 — Contextualización de PQRS](04-desarrollo-agil/sprint-3-contextualizacion-pqrs.md) | Completado | Registrar el aislamiento contextual de PQRS, consultas, rutas, reportes y procesos programados sin habilitar multi-copropiedad visible. |
 | [Sprint 4 — Aislamiento de etiquetas de PQRS](04-desarrollo-agil/sprint-4-aislamiento-expediente-pqrs.md) | Completado | Aislar etiquetas y sus asociaciones para impedir cruces entre Copropiedades. |
+| [Sprint 5 — Activación de autorización contextual](04-desarrollo-agil/sprint-5-activacion-autorizacion-contextual.md) | Completado | Activar Membresías, Roles y Permisos contextuales como fuente de autorización, con 137 pruebas aprobadas y cero divergencias. |
 | [Pruebas automatizadas](04-desarrollo-agil/pruebas-automatizadas.md) | Pendiente | Inventariar la cobertura existente y sus límites. |
 
 ### 05. Arquitectura
@@ -194,6 +195,6 @@ estados de este índice deben actualizarse en el mismo cambio documental.
 
 ## Control documental
 
-- **Versión:** v1.17
+- **Versión:** v1.18
 - **Fecha de creación:** 30 de julio de 2026
-- **Fecha de última actualización:** 31 de julio de 2026
+- **Fecha de última actualización:** 2 de agosto de 2026

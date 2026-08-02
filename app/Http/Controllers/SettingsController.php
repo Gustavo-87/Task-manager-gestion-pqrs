@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Application\Configuracion\ActualizarConfiguracionCopropiedadInicial;
+use App\Application\Autorizacion\AutorizacionContextual;
+use App\Application\Contexto\ContextoInstitucionalNoConfigurado;
+use App\Application\Contexto\ContextoOperativo;
 use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use RuntimeException;
 
 class SettingsController extends Controller
 {
@@ -18,14 +20,20 @@ class SettingsController extends Controller
 
     public function edit(Request $request): View
     {
-        abort_unless(in_array($request->user()->role, ['admin','gestor'], true), 403);
+        abort_unless(app(AutorizacionContextual::class)->tienePermiso(app(ContextoOperativo::class), 'configuracion.gestionar'), 403);
 
         return view('settings.edit', ['settings' => SiteSetting::current()]);
     }
 
     public function update(Request $request): RedirectResponse
     {
-        abort_unless(in_array($request->user()->role, ['admin','gestor'], true), 403);
+        try {
+            $contexto = app(ContextoOperativo::class);
+        } catch (ContextoInstitucionalNoConfigurado $exception) {
+            return back()->withErrors(['contexto' => $exception->getMessage()])->withInput();
+        }
+
+        abort_unless(app(AutorizacionContextual::class)->tienePermiso($contexto, 'configuracion.gestionar'), 403);
         $data = $request->validate([
             'nombre_conjunto' => ['required', 'string', 'max:150'],
             'nit' => ['nullable', 'string', 'max:40'],
@@ -48,15 +56,7 @@ class SettingsController extends Controller
             $data['logo_path'] = $newLogoPath;
         }
 
-        try {
-            $this->actualizarConfiguracion->execute($settings, $data);
-        } catch (RuntimeException $exception) {
-            if ($newLogoPath) {
-                Storage::disk('public')->delete($newLogoPath);
-            }
-
-            return back()->withErrors(['contexto' => $exception->getMessage()])->withInput();
-        }
+        $this->actualizarConfiguracion->execute($settings, $data);
 
         if ($newLogoPath && $previousLogoPath) {
             Storage::disk('public')->delete($previousLogoPath);

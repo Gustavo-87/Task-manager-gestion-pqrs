@@ -13,16 +13,18 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use Tests\Concerns\CreatesInstitutionalContext;
 use Tests\TestCase;
 
 class SincronizarIdentidadContextualUsuarioTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreatesInstitutionalContext, RefreshDatabase;
 
     public function test_user_creation_synchronizes_copropiedad_membership_and_role(): void
     {
         ['organizacion' => $organizacion, 'copropiedad' => $copropiedad] = $this->prepareIdentity(['residente']);
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', ['usuarios.gestionar']);
 
         $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'Nueva Residente',
@@ -51,8 +53,9 @@ class SincronizarIdentidadContextualUsuarioTest extends TestCase
 
     public function test_changing_users_role_ends_previous_assignment_and_assigns_equivalent_role(): void
     {
-        $this->prepareIdentity(['residente', 'auditor']);
+        ['organizacion' => $organizacion, 'copropiedad' => $copropiedad] = $this->prepareIdentity(['residente', 'auditor']);
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', ['usuarios.gestionar']);
         $usuario = User::factory()->create(['role' => 'residente']);
         $service = app(SincronizarIdentidadContextualUsuario::class);
         $service->actualizarUsuario($usuario, []);

@@ -20,7 +20,7 @@ final class ContextResolver
         if (! $siteSetting->exists
             || $siteSetting->organizacion_id === null
             || $siteSetting->copropiedad_id === null) {
-            throw new RuntimeException(
+            throw new ContextoInstitucionalNoConfigurado(
                 'El contexto institucional inicial no está configurado. '
                 .'Ejecute php artisan resuelve:crear-contexto-inicial.'
             );

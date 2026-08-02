@@ -21,6 +21,10 @@ class PqrContextIsolationTest extends TestCase
         [$organizacion, $copropiedad] = $this->createInstitutionalContext();
         [$otraOrganizacion, $otraCopropiedad] = $this->createOtherContext();
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', [
+            'pqrs.listar',
+            'pqrs.ver_todas',
+        ]);
 
         foreach (range(1, 12) as $number) {
             Pqr::factory()->paraContexto($organizacion, $copropiedad)->create([
@@ -56,6 +60,7 @@ class PqrContextIsolationTest extends TestCase
         [$organizacion, $copropiedad] = $this->createInstitutionalContext();
         [$otraOrganizacion, $otraCopropiedad] = $this->createOtherContext();
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', ['pqrs.ver_todas']);
         $local = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
         $foreign = Pqr::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create();
 
@@ -138,6 +143,10 @@ class PqrContextIsolationTest extends TestCase
         [$otraOrganizacion, $otraCopropiedad] = $this->createOtherContext();
         $resident = User::factory()->create(['role' => 'residente']);
         $other = User::factory()->create(['role' => 'residente']);
+        $this->createContextualIdentity($resident, $organizacion, $copropiedad, 'residente', [
+            'pqrs.listar',
+            'pqrs.ver_propias',
+        ]);
         Pqr::factory()->paraContexto($organizacion, $copropiedad)->create([
             'user_id' => $resident->id,
             'asunto' => 'Propia activa',

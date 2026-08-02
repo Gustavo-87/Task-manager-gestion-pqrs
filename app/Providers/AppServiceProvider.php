@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Application\Contexto\ContextoOperativo;
 use App\Application\Contexto\ContextResolver;
+use App\Application\Autorizacion\AutorizacionContextual;
 use App\Application\Pqrs\ConsultaPqrsContextuales;
 use App\Models\PqrAttachment;
 use App\Models\SiteSetting;
@@ -19,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(ContextResolver::class, fn () => new ContextResolver());
+        $this->app->scoped(AutorizacionContextual::class, fn () => new AutorizacionContextual());
         $this->app->scoped(ConsultaPqrsContextuales::class, fn () => new ConsultaPqrsContextuales());
         $this->app->scoped(
             ContextoOperativo::class,

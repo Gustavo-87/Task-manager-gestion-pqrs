@@ -62,6 +62,11 @@ class PqrTagContextTest extends TestCase
             'estado' => 'activa',
         ]);
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', [
+            'gestion.herramientas_gestionar',
+            'pqrs.ver_todas',
+            'pqrs.gestionar',
+        ]);
         $pqr = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
         PqrTag::factory()->paraContexto($organizacion, $copropiedad)->create(['name' => 'Etiqueta local']);
         PqrTag::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create(['name' => 'Etiqueta externa']);
@@ -86,6 +91,7 @@ class PqrTagContextTest extends TestCase
             'estado' => 'activa',
         ]);
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->createContextualIdentity($admin, $organizacion, $copropiedad, 'admin', ['pqrs.gestionar']);
         $pqr = Pqr::factory()->paraContexto($organizacion, $copropiedad)->create();
         $externa = PqrTag::factory()->paraContexto($otraOrganizacion, $otraCopropiedad)->create();
 
