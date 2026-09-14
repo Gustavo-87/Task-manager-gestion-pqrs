@@ -17,15 +17,15 @@
             ];
         @endphp
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             @foreach ($dashboardCards as $card)
                 @php
                     $dashboardQuery = array_filter([
                         'estado' => $card['status'],
                     ], fn ($value) => filled($value));
                 @endphp
-                <a href="{{ route('pqrs.index', $dashboardQuery) }}" class="rounded-xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $card['card'] }}">
-                    <div class="flex items-center justify-between gap-2"><div><p class="text-xs font-semibold uppercase tracking-wide {{ $card['text'] }}">{{ $card['label'] }}</p><p class="mt-2 text-3xl font-bold {{ $card['text'] }}">{{ $card['value'] }}</p></div><div class="rounded-xl p-2.5 {{ $card['iconBg'] }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $card['icon'] }}"/></svg></div></div>
+                <a href="{{ route('pqrs.index', $dashboardQuery) }}" class="min-w-0 rounded-xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $card['card'] }}">
+                    <div class="flex items-center justify-between gap-3"><div class="min-w-0 flex-1 break-words"><p class="text-xs font-semibold uppercase tracking-wide {{ $card['text'] }}">{{ $card['label'] }}</p><p class="mt-2 text-3xl font-bold {{ $card['text'] }}">{{ $card['value'] }}</p></div><div class="shrink-0 rounded-xl p-2.5 {{ $card['iconBg'] }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $card['icon'] }}"/></svg></div></div>
                 </a>
             @endforeach
         </div>
